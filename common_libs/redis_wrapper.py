@@ -1,0 +1,111 @@
+from  redis import from_url
+import json
+
+class redis_steams:
+    __slots__= ['conn']
+    
+    def __init__(self,redis_url:str):
+        self.conn = from_url(redis_url)
+        """
+        self.topic,self.consumer_group=topic,consumer_group
+        
+            key: The key name of the stream.
+            group: The name given to the consumer group.
+            <id | $>: The ID of the last-delivered message. Use $ to start from the new messages.
+            MKSTREAM (optional): Automatically create the stream if it does not exist.
+         
+        if consumer_group and topic:
+            try:
+             self.conn.xgroup_create( self.topic, self.consumer_group, id='0', mkstream=True)
+            except:
+                pass
+        """
+    def info(self):
+        return self.conn.info()
+    
+    def __encode_message(self,message)->dict:
+        return {'message':json.dumps(message)}
+    
+    def __decode_message(self,messages_list:list)->list:
+        res=[]
+        topic=messages_list[0][0]
+        for _message in messages_list[0][1]:
+            res.append({'topic':topic,'message_id':_message[0],'message':json.loads(_message[1][b'message']) 
+            })
+        return res    
+    
+    def create_consumer_group(self,topic:str,consumer_group:str)->dict:
+        res={}
+        try:
+            self.conn.xgroup_create( topic, consumer_group, id='0', mkstream=True)
+            res={'status':True,'error':None}
+        except Exception as e:
+            res={'status':False,'error':str(e)} 
+        return res      
+        
+    def publish(self,topic:str,message_dict:dict)->bytes:
+        return self.conn.xadd(topic, self.__encode_message(message_dict)) 
+
+    def bulk_publish(self,topic:str,message_list:list)->list:
+        pipe = self.conn.pipeline()
+        for _message in message_list:
+            pipe.xadd(topic, self.__encode_message(_message)) 
+        return pipe.execute()
+    
+    def delete_all(self):
+        "Delete all keys in all databases on the current host"
+        return self.conn.execute_command('FLUSHALL')
+    
+    def topic_info(self,topic:str)->dict:
+        return self.conn.xinfo_stream(topic)
+
+    def consumer_group_info(self,topic:str)->bool:
+        return self.conn.xinfo_groups(topic)
+
+    def consume(self,topic:str,consumer_group:str,count:int=1,consumer:str='default_consumer')->list:
+        messages_list=self.conn.xreadgroup(consumer_group, consumer, {topic: '>'}, count=count)
+        if len(messages_list)<1:
+            return None
+        else:
+            return  self.__decode_message(messages_list)
+
+    def commit(self,topic:str,consumer_group:str,message_id:str)->list:
+        return  self.conn.xack(topic, consumer_group, message_id)    
+
+    def get_uncommited_messages(self,topic:str,consumer_group:str,count:int=10)->list:
+        return  self.conn.xpending_range(name=topic, groupname=consumer_group, min="-", max="+",count=count)
+
+    def clear_topic(self,topic:str)->list:
+        return  self.conn.xtrim(topic, 0)
+
+
+class redis_dict:
+    __slots__= ['conn','app_name']
+    
+    def __init__(self,redis_url:str,app_name:str=None):
+        self.conn = from_url(redis_url)
+        self.app_name=app_name
+        """
+        self.topic,self.consumer_group=topic,consumer_group
+        
+            key: The key name of the stream.
+            group: The name given to the consumer group.
+            <id | $>: The ID of the last-delivered message. Use $ to start from the new messages.
+            MKSTREAM (optional): Automatically create the stream if it does not exist.
+         
+        if consumer_group and topic:
+            try:
+             self.conn.xgroup_create( self.topic, self.consumer_group, id='0', mkstream=True)
+            except:
+                pass
+        """
+    def convert_key(self,key:str):
+        if self.app_name is not None:
+            key=f'{self.app_name}_{key}'
+        return key
+        
+    def set_single_value(self,key,value):
+        return self.conn.set(self.convert_key(key), value)
+    
+    def get_single_value(self,key):
+        return self.conn.get(self.convert_key(key))

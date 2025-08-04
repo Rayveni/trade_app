@@ -8,10 +8,13 @@ services:
     environment:
       - TZ=${timezone}
       - app_logs=/app/logs   
-      - log_level=${log_level}          
+      - log_level=${log_level}   
+      - redis_url=${redis_url}   
+      - redis_topics=${redis_topics}                 
     volumes: 
       - app_code_source:/app/app
       - logs-store:/app/logs 
+      - common_libs:/app/app/backend/common_libs
     command: >
         bash -c "python -m uvicorn backend.main:app --host 0.0.0.0 --port 81"         
     ports:
@@ -130,4 +133,13 @@ volumes:
       o: bind
       type: none
       device: ${logs_dir} 
+
+  common_libs: 
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${common_libs} 
+
+      
 

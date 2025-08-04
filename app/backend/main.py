@@ -9,10 +9,11 @@ from sys import exc_info
 from backend.logger.logger import logger
 from backend.logger.log_middleware import LogMiddleware
 from backend.api.router import router as router_api
+from backend.api.api_redis.router import router as router_redis
 #from backend.scheduler.router import router as router_scheduler
 app = FastAPI()
 
-
+from backend.common_libs import *
 async def catch_exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
@@ -39,5 +40,7 @@ app.add_middleware(
 app.middleware('http')(catch_exceptions_middleware)
 app.add_middleware(LogMiddleware)
 app.include_router(router_api)
+app.include_router(router_redis)
+
 #app.include_router(router_scheduler)
 app.mount("/", StaticFiles(directory="frontend", html=True))

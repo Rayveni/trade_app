@@ -3,3 +3,4 @@ uvicorn
 python-multipart
 openpyxl
 redis
+psycopg2-binary

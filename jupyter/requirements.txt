@@ -19,3 +19,5 @@ oauth2client
 selenium
 selenium_stealth
 apscheduler
+psycopg2-binary
+redis

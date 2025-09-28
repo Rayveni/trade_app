@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 #from .common_libs import *
 import json
-from .schemas import CreateTopic
+from .schemas import TopicParam,PublishMessage
 #from ..core.upload import create_export_file
 from os import getenv
 from ast import literal_eval
@@ -26,11 +26,25 @@ async def delete_all_keys():
     redis_steams(redis_url).delete_all()
     return 'True'
 
+@router.post("/publish")
+async def publish_message(publish_info:PublishMessage):
+    topic_dict = publish_info.dict()
+    res=redis_steams(redis_url).publish(topic_dict['topic'],topic_dict['message'])
+    return JSONResponse(content=jsonable_encoder(res))
+
+@router.get("/consume/{topic}/{consumer_group}")
+async def consume(topic:str,consumer_group:str):
+    r_s = redis_steams(redis_url)
+    redis_res=r_s.consume(topic,consumer_group)[0]
+    commit_res=r_s.commit(topic,consumer_group,redis_res['message_id'])
+    return JSONResponse(content=jsonable_encoder({'consume':redis_res,'commit':commit_res}))
+
 @router.post("/create/topic")
-async def create_topic(topic:CreateTopic):
+async def create_topic(topic:TopicParam):
     topic_dict = topic.dict()
     res=redis_steams(redis_url).create_consumer_group(topic_dict['topic'],topic_dict['consumer_group'])
     return JSONResponse(content=jsonable_encoder(res))
+
 
 @router.post("/create/topic/all")
 async def create_topic():
@@ -54,6 +68,7 @@ async def topic_infoall():
 async def topic_info(topic_id:str):
     res=redis_steams(redis_url).consumer_group_info(topic_id)
     return JSONResponse(content=jsonable_encoder(res))
+
 
 
 

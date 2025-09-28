@@ -28,11 +28,11 @@ services:
     image: local_image/worker 
     environment: 
       - redis_url=${redis_url} 
+      - redis_topics=${redis_topics}        
       - TZ=${timezone}       
     volumes: 
-      - type: bind
-        source: ${worker_code_source}
-        target: /worker     
+      - worker_code_source:/worker
+      - common_libs:/worker/backend/common_libs   
     command: python worker.py        
     depends_on:
       - redis
@@ -141,6 +141,13 @@ volumes:
       o: bind
       type: none
       device: ${common_libs} 
+
+  worker_code_source: 
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${worker_code_source} 
 
       
 

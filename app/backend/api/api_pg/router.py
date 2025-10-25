@@ -8,7 +8,7 @@ from fastapi.encoders import jsonable_encoder
 from os import getenv,path
 from .schemas import UserTables
 from backend.common_libs.pg_wrapper import pg_wrapper
-router = APIRouter(prefix="/api/pg", tags=["API","POSTGRES"])
+router = APIRouter(prefix="/api/pg", tags=["POSTGRES"])
 dir_path = path.dirname(path.realpath(__file__))
 pg_conn=str(getenv('pg_url'))
 

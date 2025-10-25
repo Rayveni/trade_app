@@ -53,7 +53,7 @@ class JobScheduler:
         self.job_id_job_names = {}
         
     def schedule(self):
-        logger.debug(f'()')
+        #logger.debug(f'()')
         self.scheduler = BackgroundScheduler()
         #self.scheduler.add_listener(self.listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED)
         self.scheduler.start()

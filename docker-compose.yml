@@ -11,7 +11,9 @@ services:
       - log_level=${log_level}   
       - redis_url=${redis_url}   
       - redis_topics=${redis_topics}  
-      - pg_url=postgresql://${db_user}:${db_pswd}@${db_host}/${db_name}             
+      - pg_url=postgresql://${db_user}:${db_pswd}@${db_host}/${db_name}     
+      - app_name=${app_name}    
+      - redis_task_status=${redis_task_status}                  
     volumes: 
       - app_code_source:/app/app
       - logs-store:/app/logs 
@@ -30,6 +32,8 @@ services:
       - redis_url=${redis_url} 
       - redis_topics=${redis_topics}        
       - TZ=${timezone}       
+      - app_name=${app_name}          
+      - redis_task_status=${redis_task_status}     
     volumes: 
       - worker_code_source:/worker
       - common_libs:/worker/backend/common_libs   

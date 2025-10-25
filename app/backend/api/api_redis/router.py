@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Form, File, UploadFile
 # from loguru import logger
 from fastapi.requests import Request
-from backend.common_libs.redis_wrapper import redis_steams
+from backend.common_libs.redis_wrapper import redis_steams,redis_dict
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 #from .common_libs import *
@@ -10,8 +10,8 @@ from .schemas import TopicParam,PublishMessage
 #from ..core.upload import create_export_file
 from os import getenv
 from ast import literal_eval
-router = APIRouter(prefix="/api/redis", tags=["API","REDIS"])
-redis_url=getenv('redis_url')
+router = APIRouter(prefix="/api/redis", tags=["REDIS"])
+redis_url,app_name=getenv('redis_url'),getenv('app_name')
 
 redis_topics=literal_eval(getenv('redis_topics'))
 
@@ -69,6 +69,7 @@ async def topic_info(topic_id:str):
     res=redis_steams(redis_url).consumer_group_info(topic_id)
     return JSONResponse(content=jsonable_encoder(res))
 
-
-
-
+@router.get("/keys/info/{dict_name}")
+async def dict_info(dict_name:str):
+    res=redis_dict(redis_url,app_name).get_dict(dict_name)
+    return JSONResponse(content=jsonable_encoder(res))

@@ -8,8 +8,9 @@ from sys import exc_info
 #from app.pages.router import router as router_page
 from backend.logger.logger import logger
 from backend.logger.log_middleware import LogMiddleware
-from backend.api.router import router as router_api
+#from backend.api.router import router as router_api
 from backend.api.api_redis.router import router as router_redis
+from backend.api.api_tasks.router import router as router_tasks
 from backend.api.api_pg.router import router as router_pg
 #from backend.scheduler.router import router as router_scheduler
 app = FastAPI()
@@ -40,7 +41,8 @@ app.add_middleware(
 )
 app.middleware('http')(catch_exceptions_middleware)
 app.add_middleware(LogMiddleware)
-app.include_router(router_api)
+#app.include_router(router_api)
+app.include_router(router_tasks)
 app.include_router(router_redis)
 app.include_router(router_pg)
 #app.include_router(router_scheduler)

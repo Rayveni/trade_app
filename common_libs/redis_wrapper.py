@@ -109,3 +109,28 @@ class redis_dict:
     
     def get_single_value(self,key):
         return self.conn.get(self.convert_key(key))
+
+    def set_dict(self,dict_name:str,mapping:dict):
+        return self.conn.hset(self.convert_key(dict_name), mapping=mapping)
+
+    def get_dict(self,dict_name:str,key=None):
+        if key is None:
+            return self.conn.hgetall(self.convert_key(dict_name))
+        else:
+            return self.conn.hget(self.convert_key(dict_name),key)
+
+    def dict_len(self,dict_name:str)->int:
+        return self.conn.hlen(self.convert_key(dict_name))
+    
+    def dict_del_key(self,dict_name:str,key)->int:
+        return self.conn.hdel(self.convert_key(dict_name),key)
+    
+    def update_dict_value(self,dict_name:str,key,new_value):
+        pipe = self.conn.pipeline()
+        _dict=self.convert_key(dict_name)
+        pipe.hdel(_dict,key)
+        pipe.hset(_dict,key=key,value=new_value)
+        return pipe.execute()
+    
+    def dict_add_key(self,dict_name:str,key,value)->int:
+        return self.conn.hset(self.convert_key(dict_name),key=key,value=value)

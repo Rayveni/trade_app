@@ -19,10 +19,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def backup():
-    res=r_jobs.read_app_queue()
-    logger.debug(f'function: run {res}')
+def read_app_queue():
+    res=r_jobs.read_app_queue(topic='app_topic')
+    logger.debug(f'function read_app_queue: run {res}')
 
+def read_tasks_queue():
+    res=r_jobs.read_app_queue(topic='tasks_topic')
+    logger.debug(f'function read_tasks_queue: run {res}')
 
 class JobScheduler:
     def __init__(
@@ -31,6 +34,7 @@ class JobScheduler:
 
         self.cron_triggers = {
             'every10seconds': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='*/10'),
+            'every20seconds': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='*/20'),
             'everyminute': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='0'),
             'every5minutes': CronTrigger(year='*', month='*', day='*', hour='*', minute='*/5', second='0'),
             'everyhour': CronTrigger(year='*', month='*', day='*', hour='*', minute='0', second='0'),
@@ -39,14 +43,22 @@ class JobScheduler:
 
         # job params and stats
         self.job_name_params = {
-            'job_backup': {
+            'task_app_process': {
                 'trigger': self.cron_triggers['every10seconds'],
                 #'trigger': 'interval',
                 #'seconds': 1,
-                'func': backup,    
+                'func': read_app_queue,    
                 'max_instances': 1,
                 'run_on_start': True,
             },
+            'task_process': {
+                'trigger': self.cron_triggers['every20seconds'],
+                #'trigger': 'interval',
+                #'seconds': 1,
+                'func': read_tasks_queue,    
+                'max_instances': 1,
+                'run_on_start': True,
+            },            
         }
         self.scheduler = None
         # reverse lookup

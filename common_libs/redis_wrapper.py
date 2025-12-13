@@ -23,14 +23,14 @@ class redis_steams:
     def info(self):
         return self.conn.info()
     
-    def __encode_message(self,message)->dict:
-        return {'message':json.dumps(message)}
+    def __encode_message(self,message,header_dict)->dict:
+        return {'message':json.dumps(message),'header':json.dumps(header_dict)}
     
     def __decode_message(self,messages_list:list)->list:
         res=[]
         topic=messages_list[0][0]
         for _message in messages_list[0][1]:
-            res.append({'topic':topic,'message_id':_message[0],'message':json.loads(_message[1][b'message']) 
+            res.append({'topic':topic,'message_id':_message[0],'message':json.loads(_message[1][b'message']),'header':json.loads(_message[1][b'header']) 
             })
         return res    
     
@@ -43,8 +43,8 @@ class redis_steams:
             res={'status':False,'error':str(e)} 
         return res      
         
-    def publish(self,topic:str,message_dict:dict)->bytes:
-        return self.conn.xadd(topic, self.__encode_message(message_dict)) 
+    def publish(self,topic:str,message_dict:dict,header_dict:dict={'type':'default'})->bytes:
+        return self.conn.xadd(topic, self.__encode_message(message_dict,header_dict)) 
 
     def bulk_publish(self,topic:str,message_list:list)->list:
         pipe = self.conn.pipeline()

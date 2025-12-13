@@ -34,6 +34,7 @@ services:
       - TZ=${timezone}       
       - app_name=${app_name}          
       - redis_task_status=${redis_task_status}     
+      - redis_task_original_message=${redis_task_original_message}         
     volumes: 
       - worker_code_source:/worker
       - common_libs:/worker/backend/common_libs   

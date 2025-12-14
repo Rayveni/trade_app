@@ -32,4 +32,12 @@ async def user_tables(return_type: UserTables= Depends()):
     else:
         return responce
 
+@router.get("/truncate/{table_name}")
+async def truncate_table(table_name:str):
+    res=pg_wrapper(pg_conn).truncate(table_name)
+    return JSONResponse(content=jsonable_encoder(res))
+    
+
+
+
 

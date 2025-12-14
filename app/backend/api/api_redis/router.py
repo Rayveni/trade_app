@@ -70,6 +70,7 @@ async def topic_info(topic_id:str):
     return JSONResponse(content=jsonable_encoder(res))
 
 @router.get("/keys/info/{dict_name}")
-async def dict_info(dict_name:str):
-    res=redis_dict(redis_url,app_name).get_dict(dict_name)
+async def dict_info(dict_name:str,key:str=None):
+    res=redis_dict(redis_url,app_name).get_dict(dict_name,key)
     return JSONResponse(content=jsonable_encoder(res))
+

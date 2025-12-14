@@ -1,7 +1,7 @@
 from backend.common_libs.redis_wrapper import redis_steams,redis_dict
 from os import getenv
 from ast import literal_eval
-from json import dumps
+import json
 from datetime import datetime
 
 #redis_topics=literal_eval(getenv('redis_topics'))
@@ -29,19 +29,26 @@ class redis_jobs:
     
     def __process_queue_message(self,queue_message,queue_name)->None:
         now_datetime=datetime.now().isoformat()
+        status_message={'status':'new_task',
+                        'queue_name':queue_name,
+                        'created':now_datetime,
+                        'updated':now_datetime
+                        }   
+        
+        
+        message_header=json.loads(queue_message['header'])
+        task_id=message_header['id']
+        #message_id=queue_message['message_id']     
         if queue_name=='app_topic':
-            status_message={'status':'new_task',
-                            'created':now_datetime,
-                            'updated':now_datetime
-                            }
             
-            message_id=queue_message['message_id']
-            print (message_id)
-            redis_dict(redis_url,app_name).dict_add_key(dict_name=redis_task_status,key=message_id,value=dumps(status_message))
-            redis_dict(redis_url,app_name).dict_add_key(dict_name=redis_task_original_message,key=message_id,value=queue_message['message'])
+            print('~~~~~~~~~~~~~~~~~0000000000~~~~~~~~~~~~~~~~~~~~')
+            print(queue_message)
+            print('~~~~~~~~~~~~~~~~~0000000000~~~~~~~~~~~~~~~~~~~~')
+            redis_dict(redis_url,app_name).dict_add_key(dict_name=redis_task_status,key=task_id,value=json.dumps(status_message))
+            redis_dict(redis_url,app_name).dict_add_key(dict_name=redis_task_original_message,key=task_id,value=queue_message['message'])
     
     
-            res=redis_steams(redis_url).publish(self.redis_topics['tasks_topic']['name'],{'topic':queue_name,'key':str(message_id)})
+            res=redis_steams(redis_url).publish(self.redis_topics['tasks_topic']['name'],{'topic':queue_name,'key':task_id})
         else:
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             print(queue_message)

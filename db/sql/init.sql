@@ -1,4 +1,5 @@
-CREATE TABLE IF NOT EXISTS raw_securities (
+
+CREATE TABLE IF NOT EXISTS securities_dict (
   secid varchar(51) PRIMARY KEY,
   shortname varchar(189),
   regnumber varchar(189),
@@ -16,3 +17,5 @@ CREATE TABLE IF NOT EXISTS raw_securities (
   sys_created timestamp  default now(),
   sys_updated timestamp   null
 );
+
+CREATE TABLE IF NOT EXISTS temp_securities_dict (LIKE securities_dict);

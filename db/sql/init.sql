@@ -19,3 +19,18 @@ CREATE TABLE IF NOT EXISTS securities_dict (
 );
 
 CREATE TABLE IF NOT EXISTS temp_securities_dict (LIKE securities_dict);
+CREATE UNIQUE INDEX temp_securities_dict_mm_idx ON temp_securities_dict (secid);
+
+CREATE TABLE IF NOT EXISTS etl_log (
+  table_name varchar(51)  not null,
+  status_flg bool not null default false,
+  start_param int not null default 0,
+  oper_date date not null default date '1900-01-01',
+  query json null,
+  error_message text null,
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null
+  
+);
+
+CREATE UNIQUE INDEX etl_log_mm_idx ON etl_log (table_name,start_param,oper_date);

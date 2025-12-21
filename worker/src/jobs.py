@@ -1,4 +1,7 @@
 from backend.common_libs.redis_wrapper import redis_steams,redis_dict
+from backend.common_libs.moex_api import moex_api
+from backend.common_libs.pg_wrapper import pg_wrapper
+from moex_etl import get_unbound_moex_query
 from os import getenv
 from ast import literal_eval
 import json
@@ -7,12 +10,27 @@ from datetime import datetime
 #redis_topics=literal_eval(getenv('redis_topics'))
 redis_url,app_name=getenv('redis_url'),getenv('app_name')
 redis_task_status,redis_task_original_message=getenv('redis_task_status'),getenv('redis_task_original_message')
+
+moex_api_instance=moex_api()
+
+moex_limit,moex_n_concurrent=getenv('moex_limit'),getenv('moex_n_concurrent')
+
+
+
 class redis_jobs:
-    __slots__ = ('redis_conn','redis_topics')
+    __slots__ = ('redis_conn','redis_topics','pg_conn','pg_table_params')
     def __init__(self)->None:
         self.redis_conn = redis_steams(getenv('redis_url'))
         self.redis_topics=literal_eval(getenv('redis_topics'))
-    
+        self.pg_conn=pg_wrapper(getenv('pg_url'))
+        self.pg_table_params={'etl_log':{'table_name':'etl_log',
+                                         'pk_columns':('table_name','start_param', 'oper_date'),
+                                         'columns':('table_name','status_flg','start_param','query','error_message')},
+                              'temp_securities_dict':{'table_name':'temp_securities_dict',
+                                         'pk_columns':('secid'),
+                                         'columns':('secid','shortname','regnumber',"name",'isin','is_traded','emitent_id','emitent_title','emitent_inn','emitent_okpo',"type","group",'primary_boardid','marketprice_boardid')}
+                              }
+        
     def __base_read_queue(self,topic:str,consumer_group:str,queue_name:str,count:int=1)->str:
         ready_to_process_messages=self.redis_conn.consume(topic,consumer_group,count)
         if ready_to_process_messages is None:
@@ -56,8 +74,49 @@ class redis_jobs:
 
 
         return 'success'
-        
     
+    def _update_securities_dict(self)->None:
+        request_info=moex_api_instance.get_securities()
+        data_list,status_list,end_flag=get_unbound_moex_query(moex_limit
+                                                             ,moex_n_concurrent
+                                                             ).get_all_data(request_info['url'],
+                                                                            0,
+                                                                            request_info['query_params']
+                                                                            )
+        table_params=self.pg_table_params['etl_log']
+        try:
+            self.pg_conn.insert_many(table_params['table_name'],
+                table_params['columns'],
+                list(map(lambda row:[table_params['table_name'],
+                                        row['success'],
+                                        row['worker_params']['params']['start'],
+                                        json.dumps(row['worker_params']),
+                                        row['error_message']]
+                            ,
+                            status_list)),
+                conflict=table_params['pk_columns'])
+            
+            self.__upsert_many('etl_log',
+                               list(map(lambda row:[table_params['table_name'],
+                                                    row['success'],
+                                                    row['worker_params']['params']['start'],
+                                                    json.dumps(row['worker_params']),
+                                                    row['error_message']
+                                                    ],
+                                                    status_list
+                                        ))
+                               )
+            self.__upsert_many('temp_securities_dict',data_list)
+        except Exception as e:
+            pass
+    def __upsert_many(self,table_name:str,insert_arr:list)->None:
+        table_params=self.pg_table_params[table_name]
+        self.pg_conn.insert_many(table_params['table_name'],
+                table_params['columns'],
+                insert_arr,
+                conflict=table_params['pk_columns'])        
+        
+  
 
     
 

@@ -22,13 +22,8 @@ class moex_api:
     
     def get_securities(self,is_trading:int=1)->dict:
         return {'url':self.base_url.format('securities'),
-                'query_params':{'start':0,'limit':100,'is_trading':is_trading},
-                'worker_params':{'job':'get_securities',
-                                 'job_type':'request',
-                                 'unbounded':True,
-                                 'data_path':['securities','data']
-                                 }
-                }
+                'query_params':{'is_trading':is_trading}
+                }    
         
     def engines_list(self)->dict:
         return {'url':self.base_url.format('engines')}

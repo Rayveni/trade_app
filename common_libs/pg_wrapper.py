@@ -19,8 +19,12 @@ class pg_wrapper:
         f=lambda cursor,query:cursor.execute(query)
         return self.base_operation(f,query=query)
         
-    def insert_many(self,table:str,columns:str,values_list:list):
-        query=f"insert into {table}({','.join(columns)}) values %s".replace('group','"group"')
+    def insert_many(self,table:str,columns:str,values_list:list,conflict:list=[]):
+        query=f"insert into {table}({','.join(columns)}) values %s"
+        if conflict!=[]:
+            conflict_update=','.join([ f"{el}=EXCLUDED.{el}" for el in set(columns) -set(conflict)])
+            query=f"{query} ON CONFLICT ({','.join({','.join(conflict)})}) DO UPDATE SET {conflict_update} ,sys_updated=now()"
+        query=query.replace('group','"group"')
         f=lambda cursor,values:execute_values(cursor, query, values)
         return self.base_operation(f,values=values_list)
 

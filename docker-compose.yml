@@ -34,7 +34,10 @@ services:
       - TZ=${timezone}       
       - app_name=${app_name}          
       - redis_task_status=${redis_task_status}     
-      - redis_task_original_message=${redis_task_original_message}         
+      - redis_task_original_message=${redis_task_original_message} 
+      - pg_url=postgresql://${db_user}:${db_pswd}@${db_host}/${db_name}
+      - moex_limit=${moex_limit}
+      - moex_n_concurrent=${moex_n_concurrent}                 
     volumes: 
       - worker_code_source:/worker
       - common_libs:/worker/backend/common_libs   

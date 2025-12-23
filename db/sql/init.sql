@@ -18,8 +18,7 @@ CREATE TABLE IF NOT EXISTS securities_dict (
   sys_updated timestamp   null
 );
 
-CREATE TABLE IF NOT EXISTS temp_securities_dict (LIKE securities_dict);
-CREATE UNIQUE INDEX temp_securities_dict_mm_idx ON temp_securities_dict (secid);
+CREATE TABLE IF NOT EXISTS temp_securities_dict (LIKE securities_dict including all);
 
 CREATE TABLE IF NOT EXISTS etl_log (
   table_name varchar(51)  not null,

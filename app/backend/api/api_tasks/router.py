@@ -25,7 +25,7 @@ async def publish_task(message:MessageBody,header:MessageHeader):
 @router.post("/publish_task/securities_dict")
 async def upload_securities_dict(start:int=0,truncate:bool=True):
     message=MessageBody(task_name='upload_securities_dict',task_params={'start':start,'truncate':truncate})
-    header=MessageHeader()
+    header=MessageHeader(type='upload_securities_dict')
     res=redis_steams(redis_url).publish(app_topic,message.model_dump_json(),header.model_dump_json())
     return JSONResponse(content=jsonable_encoder({'response':res}))
 

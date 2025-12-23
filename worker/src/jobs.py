@@ -88,10 +88,10 @@ class redis_jobs:
                     new_status_message='all iteraions are done'
                 else:
                     new_status_message='iteration complete'
-                    message['task_params']['start']=message['task_params']['start']+self.etl_job.moex_limit
+                    message['task_params']['start']=message['task_params']['start']+self.etl_job.moex_limit*self.etl_job.moex_n_concurrent
                     message['task_params']['truncate']=False
                     header['topic']='tasks_topic'
-                    self.__add_new_task(json.dumos(message),json.dumps(header))
+                    self.__add_new_task(json.dumps(message),json.dumps(header))
                 status_message=self.__status_message(new_status_message,header['topic'],current_status_state['created'],
                                                      n_iteration=current_status_state['n_iteration']+1)
                 

@@ -34,6 +34,7 @@ class JobScheduler:
 
         self.cron_triggers = {
             'every10seconds': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='*/10'),
+            'every1second': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='*/1'),
             'every20seconds': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='*/20'),
             'everyminute': CronTrigger(year='*', month='*', day='*', hour='*', minute='*', second='0'),
             'every5minutes': CronTrigger(year='*', month='*', day='*', hour='*', minute='*/5', second='0'),
@@ -52,7 +53,7 @@ class JobScheduler:
                 'run_on_start': True,
             },
             'task_process': {
-                'trigger': self.cron_triggers['every20seconds'],
+                'trigger': self.cron_triggers['every1second'],
                 #'trigger': 'interval',
                 #'seconds': 1,
                 'func': read_tasks_queue,    

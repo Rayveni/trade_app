@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS securities_dict (
   sys_created timestamp  default now(),
   sys_updated timestamp   null
 );
+create index idx_is_traded
+on securities_dict (is_traded);
 
 CREATE TABLE IF NOT EXISTS temp_securities_dict (LIKE securities_dict including all);
 

@@ -33,15 +33,12 @@ class pg_wrapper:
         return self._execute(query)
     
     def fetch_all(self,query:str,return_type:str='json')->tuple:
-        try:
-            with  psycopg2.connect(self.conn_url) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query)
-                    headers=tuple([column.name for column in cur.description])
-                    data=cur.fetchall()
-                    res=(True,self.__convert_query_result(headers,data,return_type))
-        except (Exception, Error) as error:
-            res=(False,str(error))
+        with  psycopg2.connect(self.conn_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                headers=tuple([column.name for column in cur.description])
+                data=cur.fetchall()
+                res=self.__convert_query_result(headers,data,return_type)
         return res
     
     def __convert_query_result(self, headers,data,convert_type:str='json')->list:

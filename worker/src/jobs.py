@@ -13,14 +13,15 @@ redis_url,app_name=getenv('redis_url'),getenv('app_name')
 redis_task_status,redis_task_original_message=getenv('redis_task_status'),getenv('redis_task_original_message')
 
 class redis_jobs:
-    __slots__ = ('redis_conn','redis_topics','pg_conn','etl_job')
-    def __init__(self)->None:
+    __slots__ = ('redis_conn','redis_topics','pg_conn','etl_job','logger')
+    def __init__(self,logger)->None:
         self.redis_conn = redis_steams(getenv('redis_url'))
         self.redis_topics=literal_eval(getenv('redis_topics'))
         self.pg_conn=pg_wrapper(getenv('pg_url'))
         self.etl_job=etl_jobs(self.pg_conn,
                               int(getenv('moex_limit')),
                               int(getenv('moex_n_concurrent')))
+        self.logger=logger
 
         
     def __base_read_queue(self,topic:str,consumer_group:str,queue_name:str,count:int=1)->str:
@@ -50,57 +51,71 @@ class redis_jobs:
                         'updated':now_datetime
                         }  
         return json.dumps(status_message) 
+    
     def __process_queue_message(self,queue_message,queue_name)->None:    
         message_header=json.loads(queue_message['header'])
         task_id=message_header['id']   
         
-        print('~~~~~~~~~~~00000000000000000000~~~~~~~~~~~~~~~~~~~~~~~~~~')
-        print(queue_message)
-        print('~~~~~~~~~~~~~~~00000000000000000000000~~~~~~~~~~~~~~~~~~~~~~')  
+        
         queue_message_message=queue_message['message']               
         #message_id=queue_message['message_id']     
-        if queue_name=='app_topic':            
+        if queue_name=='app_topic':    
+            self.logger.info(f"queue={queue_name} step=0 message={queue_message}")       
             self.__update_redis_task_status(redis_task_status,task_id,self.__status_message('new_task',queue_name))
             self.__add_redis_dict(dict_name=redis_task_original_message,key=task_id,value=queue_message_message)
             message_header['topic'] ='app_topic'  
             self.__add_new_task(queue_message_message,json.dumps(message_header))
-        else:
-            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-            print(queue_message)
-            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')  
+        else: 
             self.__execute_task_message(json.loads(queue_message_message) ,message_header)  
         return 'success'
     
     def __execute_task_message(self,message:dict,header:dict)->None: 
         task_id,task_type=header['id'],header['type']    
         current_status_state=self.__get_task_status(task_id)
-        self.__update_redis_task_status(redis_task_status,task_id,self.__status_message('start processing',
-                                                                                         header['topic'],
-                                                                                         current_status_state['created']
-                                                                                         ))
+        if current_status_state['n_iteration']==0:
+            self.__update_redis_task_status(redis_task_status,task_id,self.__status_message('start processing',
+                                                                                            header['topic'],
+                                                                                            current_status_state['created']
+                                                                                            ))
 
         if task_type=='upload_securities_dict':        
             success_flg,result=self.etl_job.execute_etl_job(task_type,message['task_params'])  
+            self.logger.info(f"queue={header['topic']} step=1 message={result}")
             if success_flg:
                 
                 end_flag=result['end_flag']
                 if end_flag:
-                    new_status_message='all iteraions are done'
+                    new_status_message='all iterations are done'
+                    header['type']='check_upload_securities_dict'
+                    self.__add_new_task(json.dumps({}),json.dumps(header))
+                    self.logger.info(f"queue={header['topic']} step=2 message={result}")
                 else:
                     new_status_message='iteration complete'
                     message['task_params']['start']=message['task_params']['start']+self.etl_job.moex_limit*self.etl_job.moex_n_concurrent
                     message['task_params']['truncate']=False
+                    self.__log_info(result,1,header['topic'])
                     header['topic']='tasks_topic'
                     self.__add_new_task(json.dumps(message),json.dumps(header))
                 status_message=self.__status_message(new_status_message,header['topic'],current_status_state['created'],
                                                      n_iteration=current_status_state['n_iteration']+1)
-                
             else:
                 status_message=self.__status_message('iteration error',header['topic'],current_status_state['created'],
                                                      n_iteration=current_status_state['n_iteration']+1,error_message=result)
             
             self.__update_redis_task_status(redis_task_status,task_id,status_message)
             
+        elif task_type=='check_upload_securities_dict':
+            success_flg,result=self.etl_job.execute_etl_job(task_type,{})  
+            #self.__update_redis_task_status(redis_task_status,task_id,result)
+            self.logger.info(f"queue={header['topic']} step=3 message={result}")
+            if success_flg:
+                header['type']='copy_upload_securities_dict'
+                self.__add_new_task(json.dumps({}),json.dumps(header))
+        elif task_type=='copy_upload_securities_dict':
+            success_flg,result=self.etl_job.execute_etl_job(task_type,{})  
+            #self.__update_redis_task_status(redis_task_status,task_id,result)   
+            self.logger.info(f"queue={header['topic']} step=4 message={result}")      
+                
     def __add_redis_dict(self,dict_name:str,key:str,value)->None:
         return redis_dict(redis_url,app_name).dict_add_key(dict_name=dict_name,key=key,value=value)
         
@@ -115,3 +130,5 @@ class redis_jobs:
     
     def __add_new_task(self,message:str,header:str)->None:
         return redis_steams(redis_url).publish(self.redis_topics['tasks_topic']['name'],message,header)
+    
+

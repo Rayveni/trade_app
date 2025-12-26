@@ -20,9 +20,9 @@ class moex_api:
         self.output_format=output_format
         self.date_format='%Y-%m-%d'
     
-    def get_securities(self,is_trading:int=1)->dict:
+    def get_securities(self,is_trading:int=0)->dict:
         return {'url':self.base_url.format('securities'),
-                'query_params':{'is_trading':is_trading}
+                'query_params':{}#'is_trading':is_trading
                 }    
         
     def engines_list(self)->dict:

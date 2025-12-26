@@ -8,24 +8,28 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
 
+
+
 apscheduler_logger = logging.getLogger('apscheduler')
-r_jobs=redis_jobs()
 # decomment to skip messages from apscheduler
-#apscheduler_logger.setLevel(logging.ERROR)
+apscheduler_logger.setLevel(logging.ERROR)
 
 logging.basicConfig(
-    format='%(asctime)s %(levelname)8s [%(filename)-10s%(funcName)20s():%(lineno)04s] %(message)s',
-    level=logging.DEBUG,
+    format='[%(asctime)s %(levelname)s %(filename) s %(funcName) s:%(lineno) s] %(message)s',
+    level=logging.INFO,#DEBUG
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.info('start')
 
+r_jobs=redis_jobs(logger)
 def read_app_queue():
     res=r_jobs.read_app_queue(topic='app_topic')
-    logger.debug(f'function read_app_queue: run {res}')
+    #logger.debug(f'function read_app_queue: run {res}')
 
 def read_tasks_queue():
     res=r_jobs.read_app_queue(topic='tasks_topic')
-    logger.debug(f'function read_tasks_queue: run {res}')
+    #logger.debug(f'function read_tasks_queue: run {res}')
 
 class JobScheduler:
     def __init__(
@@ -89,11 +93,7 @@ class JobScheduler:
 def main():
     job_scheduler = JobScheduler()
     job_scheduler.schedule()
+    apscheduler_logger.error('start')
 
 if __name__ == '__main__':
     main()
-
-
-""" 
-1.получение списка дат
-"""

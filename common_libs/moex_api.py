@@ -24,17 +24,25 @@ class moex_api:
         return {'url':self.base_url.format('securities'),
                 'query_params':{}#'is_trading':is_trading
                 }    
-        
-    def engines_list(self)->dict:
-        return {'url':self.base_url.format('engines')}
-        
-    def markets_list(self,engine:str='stock')->dict:
+
+    def get_securitytypes(self)->dict:
+        return {'url':self.base_url.format('securitytypes')
+                }         
+    def get_securitygroups(self)->dict:
+        return {'url':self.base_url.format('securitygroups')
+                }   
+                
+    def get_engines(self)->dict:
+        return {'url':self.base_url.format('engines')
+                }          
+              
+    def get_markets(self,engine:str='stock')->dict:
         return {'url':self.base_url.format(f'engines/{engine}/markets')}        
      
-    def all_sec_history_per_day(self,trade_date:date,engine:str='stock',market='shares')->dict:
+    def all_sec_history_per_day(self,trade_date:date,engine:str='stock',market:str='shares')->dict:
         url_ending=f'history/engines/{engine}/markets/{market}/securities'
         return {'url':self.base_url.format(url_ending),
-                'query_params':{'trade_date':trade_date.strftime(self.date_format)}
+                'query_params':{'date':trade_date.strftime(self.date_format)}
                 }    
             
     def sec_history_per_interval(self,sec_name:str,trade_begin:date,trade_end:date,engine:str='stock',market='shares')->dict:

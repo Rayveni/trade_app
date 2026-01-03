@@ -24,7 +24,6 @@ class pg_wrapper:
         if conflict!=[]:
             conflict_update=','.join([ f"{el}=EXCLUDED.{el}" for el in set(columns) -set(conflict)])
             query=f"{query} ON CONFLICT ({','.join({','.join(conflict)})}) DO UPDATE SET {conflict_update} ,sys_updated=now()"
-        query=query.replace('group','"group"')
         f=lambda cursor,values:execute_values(cursor, query, values)
         return self.base_operation(f,values=values_list)
 

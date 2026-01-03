@@ -6,11 +6,11 @@ from etl.etl_jobs import etl_jobs
 from os import getenv
 from ast import literal_eval
 import json
-from datetime import datetime
-
+from datetime import date, timedelta,datetime
 #redis_topics=literal_eval(getenv('redis_topics'))
 redis_url,app_name=getenv('redis_url'),getenv('app_name')
 redis_task_status,redis_task_original_message=getenv('redis_task_status'),getenv('redis_task_original_message')
+date_format='%Y-%m-%d'
 
 class redis_jobs:
     __slots__ = ('redis_conn','redis_topics','pg_conn','etl_job','logger')
@@ -20,7 +20,8 @@ class redis_jobs:
         self.pg_conn=pg_wrapper(getenv('pg_url'))
         self.etl_job=etl_jobs(self.pg_conn,
                               int(getenv('moex_limit')),
-                              int(getenv('moex_n_concurrent')))
+                              int(getenv('moex_n_concurrent'))
+                              )
         self.logger=logger
 
         
@@ -57,10 +58,10 @@ class redis_jobs:
         task_id=message_header['id']   
         
         
-        queue_message_message=queue_message['message']               
+        queue_message_message=queue_message['message']  
+        self.logger.info(f"queue={queue_name} step=0 message={queue_message}")             
         #message_id=queue_message['message_id']     
-        if queue_name=='app_topic':    
-            self.logger.info(f"queue={queue_name} step=0 message={queue_message}")       
+        if queue_name=='app_topic':                   
             self.__update_redis_task_status(redis_task_status,task_id,self.__status_message('new_task',queue_name))
             self.__add_redis_dict(dict_name=redis_task_original_message,key=task_id,value=queue_message_message)
             message_header['topic'] ='app_topic'  
@@ -70,13 +71,14 @@ class redis_jobs:
         return 'success'
     
     def __execute_task_message(self,message:dict,header:dict)->None: 
-        task_id,task_type=header['id'],header['type']    
-        current_status_state=self.__get_task_status(task_id)
-        if current_status_state['n_iteration']==0:
-            self.__update_redis_task_status(redis_task_status,task_id,self.__status_message('start processing',
-                                                                                            header['topic'],
-                                                                                            current_status_state['created']
-                                                                                            ))
+        task_id,task_type,skip_status=header['id'],header['type'] ,header.get('skip_status',False)   
+        if not skip_status:
+            current_status_state=self.__get_task_status(task_id)
+            if current_status_state['n_iteration']==0:
+                self.__update_redis_task_status(redis_task_status,task_id,self.__status_message('start processing',
+                                                                                                header['topic'],
+                                                                                                current_status_state['created']
+                                                                                                ))
 
         if task_type=='upload_securities_dict':        
             success_flg,result=self.etl_job.execute_etl_job(task_type,message['task_params'])  
@@ -93,7 +95,7 @@ class redis_jobs:
                     new_status_message='iteration complete'
                     message['task_params']['start']=message['task_params']['start']+self.etl_job.moex_limit*self.etl_job.moex_n_concurrent
                     message['task_params']['truncate']=False
-                    self.__log_info(result,1,header['topic'])
+                    self.logger.info(f"queue={header['topic']} step=1 message={result}")
                     header['topic']='tasks_topic'
                     self.__add_new_task(json.dumps(message),json.dumps(header))
                 status_message=self.__status_message(new_status_message,header['topic'],current_status_state['created'],
@@ -111,10 +113,56 @@ class redis_jobs:
             if success_flg:
                 header['type']='copy_upload_securities_dict'
                 self.__add_new_task(json.dumps({}),json.dumps(header))
-        elif task_type=='copy_upload_securities_dict':
+                
+        elif task_type in ('copy_upload_securities_dict','upload_moex_dicts'):
             success_flg,result=self.etl_job.execute_etl_job(task_type,{})  
             #self.__update_redis_task_status(redis_task_status,task_id,result)   
-            self.logger.info(f"queue={header['topic']} step=4 message={result}")      
+            self.logger.info(f"queue={header['topic']} step=4 message={result}")  
+
+        elif task_type in ('update_securities_history'):
+            #success_flg,result=self.etl_job.execute_etl_job(task_type,{})  
+            #self.__update_redis_task_status(redis_task_status,task_id,result)  
+            #task_type,message['task_params']                       
+            self.logger.info(f"queue={header['topic']} step=1 message={message}") 
+            start_date = datetime.strptime(message['start_date'], date_format) 
+            end_date = datetime.strptime(message['end_date'], date_format) 
+            delta = end_date - start_date
+            days_list=[datetime.strftime(start_date + timedelta(days=i),date_format) for i in range(delta.days + 1)]
+            task_params= {k:v for k,v in message.items() if k not in ('task_name','start_date','end_date')}
+            success_flg,result=self.etl_job.execute_etl_job('update_securities_history',
+                                                            {'task_params':task_params,'days_list':days_list})
+            
+            header['type']='upload_single_sr'
+            header['topic']='tasks_topic'
+            header['skip_status']=True
+            for _date in days_list:
+                self.__add_new_task(json.dumps({'start':0,'oper_date':_date,'market':message['market'],'engine':message['engine']}),json.dumps(header))
+                
+            
+            self.__update_redis_task_status(redis_task_status,task_id,'created subtasks')
+            self.logger.info(f"queue={header['topic']} step=2 message={result}") 
+            #self.__add_new_task(json.dumps({}),json.dumps(header))
+        elif task_type in ('upload_single_sr'):
+            log_message=f"oper_date={message['oper_date']} engine={message['engine']} market={message['market']}"
+            success_flg,result=self.etl_job.execute_etl_job(task_type,{**{'oper_date':datetime.strptime(message['oper_date'], date_format)},
+                                                                       **{k:v for k,v in message.items() if k not in ('oper_date')}}) 
+
+            
+
+            if success_flg:             
+                end_flag=result['end_flag']
+                if end_flag:
+                    self.logger.info(f"queue={header['topic']} step=3 message:{log_message} status=complete")
+                else:
+
+                    
+                    message['start']=message['start']+self.etl_job.moex_limit*self.etl_job.moex_n_concurrent
+                    message['truncate']=False                    
+                    self.logger.info(f"queue={header['topic']} step=2 message:{log_message} status=next iteration")
+                    header['topic']='tasks_topic'
+                    self.__add_new_task(json.dumps(message),json.dumps(header))
+            else:
+                self.logger.error(f"queue={header['topic']} step=2 error_message:{result}")
                 
     def __add_redis_dict(self,dict_name:str,key:str,value)->None:
         return redis_dict(redis_url,app_name).dict_add_key(dict_name=dict_name,key=key,value=value)

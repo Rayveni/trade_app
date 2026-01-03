@@ -35,3 +35,69 @@ CREATE TABLE IF NOT EXISTS etl_log (
 );
 
 CREATE UNIQUE INDEX etl_log_mm_idx ON etl_log (table_name,start_param,oper_date);
+
+CREATE TABLE IF NOT EXISTS securitytypes (
+  id int  not null,
+  name varchar(100) not null ,
+  title varchar(800)  null ,
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null
+  
+);
+
+CREATE TABLE IF NOT EXISTS securitygroups (
+  id int  not null,
+  name varchar(100) not null ,
+  title varchar(800)  null ,
+  is_hidden smallint null,
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null
+  
+);
+
+CREATE TABLE IF NOT EXISTS engines (
+  id int  not null,
+  name varchar(100) not null ,
+  title varchar(800)  null ,
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null
+  
+);
+CREATE TABLE IF NOT EXISTS markets (
+  engine varchar(100) not null,
+  id int  not null,
+  name varchar(100) not null ,
+  title varchar(800)  null ,
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null
+  
+);
+
+CREATE TABLE IF NOT EXISTS securities_hist (
+  boardid varchar(12) not null,
+  tradedate date not null,
+  shortname varchar(189) not null,
+  secid varchar(51) not null,
+  numtrades numeric  null,
+  value numeric not null,
+  open numeric  null,
+  low numeric  null,
+  high numeric  null,
+  legalcloseprice numeric  null,
+  waprice numeric  null,
+  close numeric  null,
+  volume numeric  null,
+  marketprice2 numeric  null,
+  marketprice3 numeric  null,
+  admittedquote numeric  null,
+  mp2valtrd numeric not null,
+  marketprice3tradesvalue numeric not null,
+  admittedvalue numeric  null,
+  waval numeric not null,
+  tradingsession int not null,
+  currencyid varchar(9) not null,
+  trendclspr numeric  null,
+  trade_session_date date not null,
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null
+  )

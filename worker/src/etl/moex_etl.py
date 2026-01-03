@@ -4,13 +4,14 @@ from requests import get as requests_get
 from copy import deepcopy
 
 class get_unbound_moex_query:
-    __slots__ = ('limit_per_page','n_concurrent_requests')
+    __slots__ = ('limit_per_page','n_concurrent_requests','moex_root')
     
     def __init__(self,limit_per_page:int,n_concurrent_requests:int)->None:    
         self.limit_per_page=limit_per_page
         self.n_concurrent_requests=n_concurrent_requests
         
-    def get_all_data(self,url:str,start:int=0,query_params:dict={}):
+    def get_all_data(self,url:str,moex_root:str,start:int=0,query_params:dict={}):
+        self.moex_root=moex_root
         requests_result=self.execute_requests(url,start,query_params)
         return self._process_results(requests_result)
         #next()
@@ -32,7 +33,7 @@ class get_unbound_moex_query:
         res={'worker_params':worker_params,'success':True,'end_flag':False}
         try:
             request_result=requests_get(**worker_params)
-            res['data']=request_result.json()['securities']['data']
+            res['data']=request_result.json()[self.moex_root]['data']
             if len(res['data'])==0:
                 res['end_flag']=True
         except Exception as e:
@@ -47,3 +48,8 @@ class get_unbound_moex_query:
                 end_flag=True
             status_list=status_list+[{'success':_row['success'],'worker_params':_row['worker_params'],'error_message':_row.get('error_message',None)}]
         return data_list,status_list,end_flag    
+
+class single_moex_query:
+    def execute_request(self,url:str)->list:
+        res=requests_get(url)
+        return res.json()

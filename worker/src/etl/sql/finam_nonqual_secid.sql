@@ -1,0 +1,1 @@
+select secid from nonqual_shares;

@@ -37,8 +37,11 @@ class moex_api:
                 }          
               
     def get_markets(self,engine:str='stock')->dict:
-        return {'url':self.base_url.format(f'engines/{engine}/markets')}        
-     
+        return {'url':self.base_url.format(f'engines/{engine}/markets')}    
+        
+    def get_boards(self,engine:str='stock',markets:str='shares')->dict:
+        return {'url':self.base_url.format(f'engines/{engine}/markets/{markets}/boards')}  
+       
     def all_sec_history_per_day(self,trade_date:date,engine:str='stock',market:str='shares')->dict:
         url_ending=f'history/engines/{engine}/markets/{market}/securities'
         return {'url':self.base_url.format(url_ending),

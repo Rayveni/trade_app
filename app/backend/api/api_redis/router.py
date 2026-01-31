@@ -56,7 +56,7 @@ async def create_topic():
 
 
     
-@router.get("/create/topic/info/all")
+@router.get("/topic/info/all")
 async def topic_infoall():
     r_s=redis_steams(redis_url)
     res={}
@@ -64,7 +64,7 @@ async def topic_infoall():
         res[k]= r_s.consumer_group_info(v['name'])
     return JSONResponse(content=jsonable_encoder(res))
 
-@router.get("/create/topic/info/{topic_id}")
+@router.get("/topic/info/{topic_id}")
 async def topic_info(topic_id:str):
     res=redis_steams(redis_url).consumer_group_info(topic_id)
     return JSONResponse(content=jsonable_encoder(res))

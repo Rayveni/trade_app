@@ -41,3 +41,15 @@ async def update_securities_history(message:SecuritiesHistory):
     header=MessageHeader(type='update_securities_history')
     res=redis_steams(redis_url).publish(app_topic,message.model_dump_json(),header.model_dump_json())
     return JSONResponse(content=jsonable_encoder({'response':res}))
+
+async def common_task(task_name: str,task_params:dict=None):
+    if task_params is None:
+        task_params={}
+    message=MessageBody(task_name=task_name,task_params=task_params)
+    header=MessageHeader(type=task_name)
+    res=redis_steams(redis_url).publish(app_topic,message.model_dump_json(),header.model_dump_json())
+    return JSONResponse(content=jsonable_encoder({'response':res}))
+
+@router.post("/publish_task/upload_finam_dividends")
+async def upload_finam_dividends():
+    return await common_task('upload_finam_dividends')

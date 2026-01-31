@@ -15,8 +15,11 @@ class pg_wrapper:
                 n_affected=cur.rowcount
         return n_affected
                 
-    def _execute(self,query:str)->None:
-        f=lambda cursor,query:cursor.execute(query)
+    def _execute(self,query:str,query_params=None)->None:
+        if query_params is None:
+            f=lambda cursor,query:cursor.execute(query)
+        else:
+            f=lambda cursor,query:cursor.execute(query,query_params)
         return self.base_operation(f,query=query)
         
     def insert_many(self,table:str,columns:list,values_list:list,conflict:list=[]):

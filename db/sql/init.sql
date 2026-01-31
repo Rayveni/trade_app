@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS etl_log (
   status_flg bool not null default false,
   start_param int not null default 0,
   oper_date date not null default date '1900-01-01',
+  secid varchar(51) not null default  '',
   query json null,
   error_message text null,
   sys_created timestamp  default now(),
@@ -34,7 +35,7 @@ CREATE TABLE IF NOT EXISTS etl_log (
   
 );
 
-CREATE UNIQUE INDEX etl_log_mm_idx ON etl_log (table_name,start_param,oper_date);
+CREATE UNIQUE INDEX etl_log_mm_idx ON etl_log (table_name,start_param,oper_date,secid);
 
 CREATE TABLE IF NOT EXISTS securitytypes (
   id int  not null,
@@ -90,14 +91,44 @@ CREATE TABLE IF NOT EXISTS securities_hist (
   marketprice2 numeric  null,
   marketprice3 numeric  null,
   admittedquote numeric  null,
-  mp2valtrd numeric not null,
-  marketprice3tradesvalue numeric not null,
+  mp2valtrd numeric  null,
+  marketprice3tradesvalue numeric  null,
   admittedvalue numeric  null,
-  waval numeric not null,
-  tradingsession int not null,
-  currencyid varchar(9) not null,
+  waval numeric  null,
+  tradingsession int  null,
+  currencyid varchar(9)  null,
   trendclspr numeric  null,
-  trade_session_date date not null,
+  trade_session_date date  null,
   sys_created timestamp  default now(),
   sys_updated timestamp   null
-  )
+  );
+
+  CREATE UNIQUE INDEX securities_hist_mm_idx ON securities_hist (tradedate desc,secid ,boardid);
+
+
+CREATE TABLE IF NOT EXISTS boards (
+  engine varchar(100) not null,
+  market varchar(100) not null ,
+  id int  not null,
+  board_group_id int  not null,
+  boardid varchar(20) null,
+  title varchar(500)  null ,
+  is_traded int  not null,  
+  sys_created timestamp  default now(),
+  sys_updated timestamp   null 
+);
+
+create or replace view nonqual_shares as
+	select *
+    	from securities_dict
+	where is_traded = 1
+	 	  and "group" = 'stock_shares'
+	      and primary_boardid = 'TQBR';
+
+CREATE TABLE IF NOT EXISTS finam_data  (
+  secid varchar(51) PRIMARY KEY,
+  dividends_html bytea null,
+  dividends_update timestamp null,
+  news_html bytea null,
+  news_update timestamp null
+) ;

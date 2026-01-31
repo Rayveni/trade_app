@@ -1,27 +1,5 @@
 version: "3.91"
 services:
-  fast_api:
-    build:
-      context: ./
-      dockerfile: ./app/Dockerfile      
-    image: local_image/fast_api       
-    environment:
-      - TZ=${timezone}
-      - app_logs=/app/logs   
-      - log_level=${log_level}   
-      - redis_url=${redis_url}   
-      - redis_topics=${redis_topics}  
-      - pg_url=postgresql://${db_user}:${db_pswd}@${db_host}/${db_name}     
-      - app_name=${app_name}    
-      - redis_task_status=${redis_task_status}                  
-    volumes: 
-      - app_code_source:/app/app
-      - logs-store:/app/logs 
-      - common_libs:/app/app/backend/common_libs
-    command: >
-        bash -c "python -m uvicorn backend.main:app --host 0.0.0.0 --port 81"         
-    ports:
-      - "${app_ports}"
 
   worker:
     build:
@@ -44,6 +22,38 @@ services:
     command: python worker.py        
     depends_on:
       - redis
+
+
+
+
+
+
+
+  fast_api:
+    build:
+      context: ./
+      dockerfile: ./app/Dockerfile      
+    image: local_image/fast_api       
+    environment:
+      - TZ=${timezone}
+      - app_logs=/app/logs   
+      - log_level=${log_level}   
+      - redis_url=${redis_url}   
+      - redis_topics=${redis_topics}  
+      - pg_url=postgresql://${db_user}:${db_pswd}@${db_host}/${db_name}     
+      - app_name=${app_name}    
+      - redis_task_status=${redis_task_status}  
+      - start_trade_year=${start_trade_year}                
+    volumes: 
+      - app_code_source:/app/app
+      - logs-store:/app/logs 
+      - common_libs:/app/app/backend/common_libs
+    command: >
+        bash -c "python -m uvicorn backend.main:app --host 0.0.0.0 --port 81"         
+    ports:
+      - "${app_ports}"
+
+
 
   redis:
     hostname: redis    

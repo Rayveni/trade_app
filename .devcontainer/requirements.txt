@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+openpyxl
+redis
+psycopg2-binary
+pip-tools
+apscheduler
+requests

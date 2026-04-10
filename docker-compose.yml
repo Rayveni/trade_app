@@ -1,0 +1,189 @@
+version: '3.91'
+services:
+  fast_api:
+    build:
+      context: ./
+      dockerfile: ./app/Dockerfile
+    image: local_image/fast_api
+    environment:
+      - TZ=${timezone}
+      - app_name=${app_name}     
+      - redis_url=${redis_url}                   
+      - app_logs=/app/logs
+      - log_level=${log_level}
+      - msg_topic=${msg_topic}
+      - db_host=${db_host}  
+      #- app_name=${app_name}
+    secrets:  
+      - task_db_creds        
+    volumes:
+      - app_code_source:/app/app
+      - logs-store:/app/logs
+      - common_libs:/app/common_libs
+      - ./topics_config.json:/app/topics_config.json:ro
+    command: >
+      bash -c "/app/start.sh"
+    ports:
+      - '${app_ports}'
+
+  worker:
+    build:
+      context: ./worker/
+      dockerfile: Dockerfile
+    image: local_image/worker
+    environment:
+      - TZ=${timezone}
+      - redis_url=${redis_url}   
+      - db_host=${db_host}         
+      
+    secrets:  
+      - task_db_creds       
+    volumes:
+      - worker_code_source:/worker/worker
+      - common_libs:/worker/common_libs
+      - ./topics_config.json:/worker/topics_config.json:ro      
+    command: bash -c "/worker/start.sh"
+    #command: python src/worker.py
+
+  redis:
+    hostname: redis
+    image: redis:8.0.6-alpine
+    ports:
+      - ${redis_port}
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    build:
+      context: ./db/
+      dockerfile: Dockerfile
+
+    container_name: postgres_container
+    environment:
+      #POSTGRES_DB: ${db_name}
+      POSTGRES_USER: ${db_root_user}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_root_password
+      PGDATA: '/var/lib/postgresql/data/pgdata'
+    secrets:
+      - db_root_password     
+      - task_db_creds 
+    volumes:
+      - ./db/postgresql.conf:/etc/postgresql.conf      
+      - postgres_data:/var/lib/postgresql/data/pgdata
+
+    command: 'postgres -c config_file="/etc/postgresql.conf"'
+    ports:
+      - '${db_ports}'
+
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4:9.12
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${pgadmin_email}
+      PGADMIN_DEFAULT_PASSWORD: ${pgadmin_pswd}
+      PGADMIN_CONFIG_SERVER_MODE: ${pgadmin_server_mode}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    ports:
+      - '${pgadmin_ports}'
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  jupyter:
+      build:
+        context: ./jupyter/ 
+        dockerfile: Dockerfile
+        network: host      
+        args:
+          NB_USER: "${user}"
+      user: root
+      image: local_image/jupyter     
+      working_dir: /home/${user}/work
+      ports:
+        - "${juputer_ports}" 
+      volumes: 
+      - type: bind
+        source: ${notebook_folder}
+        target: /home/${user}/work
+      privileged: true   
+        
+      environment: 
+        - CHOWN_HOME=yes
+        - CHOWN_HOME_OPTS=-R    
+        - restartable=yes 
+        - TZ=${timezone} 
+        - DOCKER_STACKS_JUPYTER_CMD=notebook
+        - NB_USER=${user}
+      #stdin_open: true
+      #tty: true
+      command: "start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''" 
+
+
+
+volumes:
+  app_code_source:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${app_code_source}
+
+  logs-store:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${logs_dir}
+
+  common_libs:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${common_libs}
+
+  worker_code_source:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${worker_code_source}
+
+  postgresql_conf:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${postgresql_conf}$
+
+  postgres_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${db_data}
+
+  pgadmin_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${pgadmin_data}
+
+  redis_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ${redis_data_folder} 
+
+secrets:
+  db_root_password:
+    file: ./secrets/db_root_password.txt
+  task_db_creds:
+    file: ./secrets/task_db_creds.txt

@@ -1,0 +1,76 @@
+import psycopg2
+from psycopg2.extras import execute_values
+
+
+class pg_wrapper:
+    __slots__ = ['conn_url']
+
+    def __init__(self, conn_url: str):
+        self.conn_url = conn_url
+
+    def base_operation(self, f, **kwargs: dict) -> None:
+        with psycopg2.connect(self.conn_url) as conn:
+            with conn.cursor() as cur:
+                f(cur, **kwargs)
+                n_affected = cur.rowcount
+        return n_affected
+
+    def _execute(self, query: str, query_params=None) -> None:
+        if query_params is None:
+            f = lambda cursor, query: cursor.execute(query)
+        else:
+            f = lambda cursor, query: cursor.execute(query, query_params)
+        return self.base_operation(f, query=query)
+
+    def insert_many(
+        self, table: str, columns: list, values_list: list, conflict: list = []
+    ):
+        query = f'insert into {table}({",".join(columns)}) values %s'
+        if conflict != []:
+            conflict_update = ','.join(
+                [f'{el}=EXCLUDED.{el}' for el in set(columns) - set(conflict)]
+            )
+            query = f'{query} ON CONFLICT ({",".join({",".join(conflict)})}) DO UPDATE SET {conflict_update} ,sys_updated=now()'
+        f = lambda cursor, values: execute_values(cursor, query, values)
+        return self.base_operation(f, values=values_list)
+
+    def execute_many(self, query: str, values_list: list):
+        return self.base_operation(
+            lambda cursor, values: execute_values(cursor, query, values),
+            values=values_list,
+        )
+
+    def truncate(self, table: str):
+        query = f'truncate {table}'
+        return self._execute(query)
+
+    def fetch_all(self, query: str, return_type: str = 'json') -> tuple:
+        with psycopg2.connect(self.conn_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                headers = tuple([column.name for column in cur.description])
+                data = cur.fetchall()
+                res = self.__convert_query_result(headers, data, return_type)
+        return res
+
+    def __convert_query_result(self, headers, data, convert_type: str = 'json') -> list:
+        if convert_type == 'json':
+            res = [dict(zip(headers, row)) for row in data]
+        else:
+            res = [headers] + data
+        return res
+
+    def create_values_string(
+        self, array: list, conv_to_json_index: list = [], nostringify_index: list = []
+    ) -> str:
+        res = []
+        for i, el in enumerate(array):
+            if i in conv_to_json_index:
+                el = str(el).replace("'", '"')
+                el = f"'{el}'"
+            elif i in nostringify_index:
+                pass
+            else:
+                el = f"'{el}'"
+            res.append(el)
+        return f'({",".join(res)})'

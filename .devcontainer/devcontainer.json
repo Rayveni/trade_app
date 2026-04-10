@@ -1,0 +1,36 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/postgres
+{
+  "name": "Python 3",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "postCreateCommand": "pip install -r .devcontainer/requirements.txt",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "esbenp.prettier-vscode",
+        "jerrygoyal.shortcut-menu-bar",
+        "ReneSaarsoo.sql-formatter-vsc"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "[sql]": {
+          "editor.defaultFormatter": "ReneSaarsoo.sql-formatter-vsc"
+        },
+        "ruff.configuration": {
+          "format": {
+            "quote-style": "single"
+          }
+        },
+        "SQL-Formatter-VSCode.dataTypeCase": "upper",
+        "SQL-Formatter-VSCode.denseOperators": true,
+        "SQL-Formatter-VSCode.keywordCase": "upper"
+      }
+    }
+  }
+}

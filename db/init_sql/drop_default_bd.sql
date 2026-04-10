@@ -1,0 +1,3 @@
+DROP DATABASE postgres;
+
+DROP DATABASE user_pg;

@@ -1,0 +1,3 @@
+db_user=task_db_user
+db_name=tasks_db
+db_pswd=secret_db_pas22222

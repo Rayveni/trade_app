@@ -1,0 +1,28 @@
+{
+    "tasks_topic": {
+        "consumer_group": "worker_1",
+        "n_bulk": 1,
+        "listener_cron": {
+            "year": "*",
+            "month": "*",
+            "day": "*",
+            "hour": "*",
+            "minute": "*",
+            "second": "*/1"
+        },
+        "max_instances": 1
+    },
+    "front_topic": {
+        "consumer_group": "worker_1",
+        "n_bulk": 10,
+        "listener_cron": {
+            "year": "*",
+            "month": "*",
+            "day": "*",
+            "hour": "*",
+            "minute": "*",
+            "second": "*/3"
+        },
+        "max_instances": 1
+    }
+}

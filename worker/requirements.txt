@@ -1,0 +1,6 @@
+apscheduler
+redis
+psycopg2
+requests
+
+pip-tools

@@ -37,7 +37,8 @@ services:
       - db_host=${db_host}         
       
     secrets:  
-      - task_db_creds       
+      - task_db_creds 
+      - fin_db_creds              
     volumes:
       - worker_code_source:/worker/worker
       - common_libs:/worker/common_libs
@@ -67,6 +68,7 @@ services:
     secrets:
       - db_root_password     
       - task_db_creds 
+      - fin_db_creds       
     volumes:
       - ./db/postgresql.conf:/etc/postgresql.conf      
       - postgres_data:/var/lib/postgresql/data/pgdata
@@ -187,3 +189,5 @@ secrets:
     file: ./secrets/db_root_password.txt
   task_db_creds:
     file: ./secrets/task_db_creds.txt
+  fin_db_creds: 
+    file: ./secrets/fin_db_creds.txt

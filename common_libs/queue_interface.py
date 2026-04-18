@@ -64,7 +64,9 @@ class base_queue:
     def publish(self, topic: str, message: dict, header: dict):
         return self.driver.publish(topic, self.__encode_message(message, header))
 
-    def bulk_publish(self, topic: str, message_list: list):
+    def bulk_publish(self, topic: str, message_list: list,encode_message=True):
+        if encode_message:
+            message_list=[self.__encode_message(**_message) for _message in message_list]
         return self.driver.bulk_publish(topic, message_list)
 
     def consume(

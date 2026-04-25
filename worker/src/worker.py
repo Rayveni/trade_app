@@ -14,14 +14,23 @@ from queue_interface import base_queue
 from db_interface import db_class
 
 
+main_db_creds_path = '/run/secrets/fin_db_creds'
 task_db_creds_path = '/run/secrets/task_db_creds'
 msg_broker = base_queue(
     driver='redis', connection_setting={'redis_url': getenv('redis_url')}
 )
-db_driver = db_class(
+task_db_driver = db_class(
     driver='postgresql',
     connection_setting={
         **read_secrets(task_db_creds_path),
+        **{'db_host': getenv('db_host')},
+    },
+)
+
+main_db_driver = db_class(
+    driver='postgresql',
+    connection_setting={
+        **read_secrets(main_db_creds_path),
         **{'db_host': getenv('db_host')},
     },
 )
@@ -35,7 +44,8 @@ logger.info('start')
 
 queue_listener_inst = queue_listener(
     msg_broker=msg_broker,
-    db_driver=db_driver,
+    task_db_driver=task_db_driver,
+    main_db_driver=main_db_driver,
     queues_params={
         'front_queue': {
             'topic': 'front_topic',

@@ -1,10 +1,12 @@
 CREATE TABLE IF NOT EXISTS task_status (
   task_id VARCHAR(36) PRIMARY KEY,
+  parent_task_id VARCHAR(36)  NULL,
   status VARCHAR(10) NOT NULL DEFAULT 'NEW',
   error_message VARCHAR(56) NULL,
   sys_created TIMESTAMP DEFAULT now (),
   sys_updated TIMESTAMP NULL
 );
+CREATE INDEX IF NOT EXISTS task_status_idx ON task_status (parent_task_id);
 
 CREATE TABLE IF NOT EXISTS task_details (
   task_id VARCHAR(36) PRIMARY KEY,
@@ -15,3 +17,6 @@ CREATE TABLE IF NOT EXISTS task_details (
   sys_created TIMESTAMP DEFAULT now (),
   sys_updated TIMESTAMP NULL
 );
+
+
+

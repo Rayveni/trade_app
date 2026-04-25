@@ -1,4 +1,4 @@
-from .jobs import EtlJobs
+from .jobs import Jobs
 from functools import partial
 
 
@@ -6,18 +6,21 @@ class queue_listener:
     __slots__ = (
         'sql_dict',
         'msg_broker',
-        'db_driver',
+        'task_db_driver',
+        'main_db_driver',
         'queues_params',
         'logger',
+        'jobs'
     )
 
     def __init__(
         self,
         msg_broker,
-        db_driver,
+        task_db_driver,
+        main_db_driver,
         queues_params: dict,
         logger,
-        sql_path: str = '/worker/worker/src/jobs/sql/{}.sql',
+        sql_path: str = '/worker/worker/src/jobs/sql/tasks/{}.sql',
     ):
         self.sql_dict = {}
         for _sql_name in ['create_task', 'update_task_status']:
@@ -25,16 +28,18 @@ class queue_listener:
                 # self.insert_task_sql = file.read()
                 self.sql_dict[_sql_name] = file.read()
         self.msg_broker = msg_broker
-        self.db_driver = db_driver
+        self.task_db_driver = task_db_driver
+        self.main_db_driver = main_db_driver
         self.queues_params = queues_params
         self.logger = logger
+        self.jobs=Jobs(self.msg_broker,self.task_db_driver,self.main_db_driver,self.logger)
 
-    def _process_msg_list_new_task(self, msg_list: list) -> dict:
-        task_status_values, task_detail_values, msg_ids, header_ids = [], [], [], []
+    def _process_msg_list_new_task(self, msg_list: list) -> None:
+        task_status_values, task_detail_values, header_ids, msg_ids = [], [], [], []
         for _msg in msg_list:
-            task_status_values.append(self.db_driver.create_values_string([_msg['header']['id']]))
+            task_status_values.append(self.task_db_driver.create_values_string([_msg['header']['id']]))
             task_detail_values.append(
-                self.db_driver.create_values_string(
+                self.task_db_driver.create_values_string(
                     array=[
                         _msg['header']['id'],
                         _msg['topic'],
@@ -48,14 +53,14 @@ class queue_listener:
             header_ids.append(_msg['header']['id'])
             msg_ids.append(_msg['message_id'])
 
-        res = self.db_driver.execute(
+        res = self.task_db_driver.execute(
             self.sql_dict['create_task'].format(
                 task_status_values=','.join(task_status_values),
                 task_details_values=','.join(task_detail_values),
             )
         )
         self.logger.info(f'inserted in db res={res} messages:topic={_msg["topic"]} message_ids={",".join(msg_ids)} header_ids={",".join(header_ids)}')
-        return {'msg_ids_to_commit': msg_ids}
+
 
     def _process_msg_list_commit(self, queue_name: str, msg_id_list: list) -> None:
         for _msg_id in msg_id_list:
@@ -95,13 +100,13 @@ class queue_listener:
         )
         if msg_list is not None:
             if bulk_process:
-                msg_list_result = apply_function(msg_list)
-                self._process_msg_list_commit(
-                    queue_name, msg_list_result['msg_ids_to_commit']
-                )
+                apply_function(msg_list)
             else:
                 for msg in msg_list:
                     apply_function(msg)
+                                
+            self._process_msg_list_commit(queue_name, [_msg['message_id'] for _msg in msg_list])
+
 
             if return_msg_list:
                 res = (True, msg_list)
@@ -128,15 +133,19 @@ class queue_listener:
             return_msg_list=False,
             bulk_process=False,
         )
-
+    def __update_task_status(self,task_id:str,task_status:str,error_message:str='null')->None:
+        self.task_db_driver.execute(self.sql_dict['update_task_status'].format(task_status=task_status,error_message=error_message,task_id=task_id))
+        
     def _process_back_task(self, queue_name: str, msg: dict):
         self.logger.info(f'~~~~~~~~~~~~~~~~~~~~{msg}')
         # update status start self.sql_dict['update_task_status']
         task_id=msg['header']['id']
-        update_res=self.db_driver.execute(
-            self.sql_dict['update_task_status'].format(task_status='PROGRESS',error_message='null',task_id=task_id)
-            )
-        
-        # do smth
-        # update status end
+        self.__update_task_status(task_id=task_id,task_status='PROGRESS')
+        method_name='first_task'  
+        result = getattr( self.jobs, method_name)("World")
+        self.__update_task_status(task_id=task_id,task_status='DONE')
+
         self._process_msg_list_commit(queue_name, [msg['message_id']])
+        
+        
+

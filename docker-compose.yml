@@ -35,7 +35,8 @@ services:
       - TZ=${timezone}
       - redis_url=${redis_url}   
       - db_host=${db_host}         
-      
+      - moex_limit=${moex_limit}  
+      - moex_n_concurrent=${moex_n_concurrent}     
     secrets:  
       - task_db_creds 
       - fin_db_creds              

@@ -16,11 +16,11 @@ class MessageHeader(BaseModelConfig):
     task_name: str = 'default'
 
 
-class Two(BaseModel):
-    value: str
-
-
 class UserRegistration(BaseModel):
     username: str
     password: str
     email: str
+
+class UploadSecuritiesDictionary(BaseModel):
+    start: int=0
+    truncate: bool = True

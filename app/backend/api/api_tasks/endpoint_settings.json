@@ -2,7 +2,7 @@
   "test_model1": {
     "class": "UserRegistration"
   },
-  "test_model2": {
-    "class": "Two"
+  "upload_securities_dictionary": {
+    "class": "UploadSecuritiesDictionary"
   }
 }

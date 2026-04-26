@@ -1,0 +1,34 @@
+{
+  "UploadSecuritiesDictionary": {
+    "type": "moex",
+    "pipeline": [
+      { "moex_method": "get_securities" },
+      { "add_parameter": { "moex_root": "securities" } },
+      { "execute_moex_method": "1" },
+      { "sql": { "query": "truncate", "table": "securities_dict" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "securities_dict",
+          "pk_columns":["secid"],
+          "columns": [
+            "secid",
+            "shortname",
+            "regnumber",
+            "name",
+            "isin",
+            "is_traded",
+            "emitent_id",
+            "emitent_title",
+            "emitent_inn",
+            "emitent_okpo",
+            "type",
+            "\"group\"",
+            "primary_boardid",
+            "marketprice_boardid"
+          ]
+        }
+      }
+    ]
+  }
+}

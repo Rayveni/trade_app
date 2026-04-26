@@ -11,7 +11,7 @@ $create_task_db
 EOSQL
 
 echo "init tasks db"
-psql -v ON_ERROR_STOP=1 --username "user_pg" --dbname "tasks_db" -f /custom_scripts/init_tasks_db.sql
+psql -v ON_ERROR_STOP=1 --username "user_pg" --dbname ${db_name//[$'\t\r\n ']} -f /custom_scripts/init_tasks_db.sql
 
 echo "Read bd2 credentials"
 source /run/secrets/fin_db_creds
@@ -22,6 +22,8 @@ create_fin_db="$(db_user=${db_user//[$'\t\r\n ']} db_pswd="'${db_pswd//[$'\t\r\n
 psql -v ON_ERROR_STOP=1 --username "user_pg" --dbname "postgres" <<-EOSQL
 $create_fin_db
 EOSQL
+
+psql -v ON_ERROR_STOP=1 --username "user_pg" --dbname ${db_name//[$'\t\r\n ']} -f /custom_scripts/init_fin_db.sql
 
 echo "Running drop default database"
 psql -v ON_ERROR_STOP=1 --username "user_pg" --dbname "tasks_db" -f /custom_scripts/drop_default_bd.sql

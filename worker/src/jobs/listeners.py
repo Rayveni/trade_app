@@ -10,7 +10,7 @@ class queue_listener:
         'main_db_driver',
         'queues_params',
         'logger',
-        'jobs'
+        'jobs',
     )
 
     def __init__(
@@ -32,12 +32,16 @@ class queue_listener:
         self.main_db_driver = main_db_driver
         self.queues_params = queues_params
         self.logger = logger
-        self.jobs=Jobs(self.msg_broker,self.task_db_driver,self.main_db_driver,self.logger)
+        self.jobs = Jobs(
+            self.msg_broker, self.task_db_driver, self.main_db_driver, self.logger
+        )
 
     def _process_msg_list_new_task(self, msg_list: list) -> None:
         task_status_values, task_detail_values, header_ids, msg_ids = [], [], [], []
         for _msg in msg_list:
-            task_status_values.append(self.task_db_driver.create_values_string([_msg['header']['id']]))
+            task_status_values.append(
+                self.task_db_driver.create_values_string([_msg['header']['id']])
+            )
             task_detail_values.append(
                 self.task_db_driver.create_values_string(
                     array=[
@@ -59,8 +63,9 @@ class queue_listener:
                 task_details_values=','.join(task_detail_values),
             )
         )
-        self.logger.info(f'inserted in db res={res} messages:topic={_msg["topic"]} message_ids={",".join(msg_ids)} header_ids={",".join(header_ids)}')
-
+        self.logger.info(
+            f'inserted in db res={res} messages:topic={_msg["topic"]} message_ids={",".join(msg_ids)} header_ids={",".join(header_ids)}'
+        )
 
     def _process_msg_list_commit(self, queue_name: str, msg_id_list: list) -> None:
         for _msg_id in msg_id_list:
@@ -104,9 +109,10 @@ class queue_listener:
             else:
                 for msg in msg_list:
                     apply_function(msg)
-                                
-            self._process_msg_list_commit(queue_name, [_msg['message_id'] for _msg in msg_list])
 
+            self._process_msg_list_commit(
+                queue_name, [_msg['message_id'] for _msg in msg_list]
+            )
 
             if return_msg_list:
                 res = (True, msg_list)
@@ -133,19 +139,35 @@ class queue_listener:
             return_msg_list=False,
             bulk_process=False,
         )
-    def __update_task_status(self,task_id:str,task_status:str,error_message:str='null')->None:
-        self.task_db_driver.execute(self.sql_dict['update_task_status'].format(task_status=task_status,error_message=error_message,task_id=task_id))
-        
+
+    def __update_task_status(
+        self, task_id: str, task_status: str, error_message: str = 'null'
+    ) -> None:
+        self.task_db_driver.execute(
+            self.sql_dict['update_task_status'].format(
+                task_status=task_status, error_message=error_message, task_id=task_id
+            )
+        )
+
+    def __create_subtask(self, queue_name: str, msg: dict):
+        pass
+
     def _process_back_task(self, queue_name: str, msg: dict):
         self.logger.info(f'~~~~~~~~~~~~~~~~~~~~{msg}')
-        # update status start self.sql_dict['update_task_status']
-        task_id=msg['header']['id']
-        self.__update_task_status(task_id=task_id,task_status='PROGRESS')
-        method_name='first_task'  
-        result = getattr( self.jobs, method_name)("World")
-        self.__update_task_status(task_id=task_id,task_status='DONE')
+        task_id = msg['header']['id']
+        self.__update_task_status(task_id=task_id, task_status='PROGRESS')
+        result = self.jobs.task_pipline(msg)
+        self.logger.info(f'////////////////////{result}')
+        if result['success'] is False:
+            update_task_status, error_message = 'ERROR', result['error_message']
+        else:
+            end_flg, error_message = result.get('end_flag', True), 'null'
+            if end_flg:
+                update_task_status = 'DONE'
+            else:
+                update_task_status = 'SPAWN SUBTASKS'
+                for _subtask in result['subtasks']:
+                    self.__create_subtask(queue_name=queue_name, msg=_subtask)
 
+        self.__update_task_status( task_id=task_id, task_status=update_task_status, error_message=error_message)
         self._process_msg_list_commit(queue_name, [msg['message_id']])
-        
-        
-

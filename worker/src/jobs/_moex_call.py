@@ -1,28 +1,21 @@
 from requests import Session
-from copy import deepcopy
+
 from multiprocessing.dummy import Pool as ThreadPool
 
 
 def moex_call(
-    url: str,
-    query_params: dict = {},
-    start: int = 0,
-    moex_root: str = None,
-    moex_limit: int = None,
-    moex_n_concurrent: int = None,
-):
 
-    query_params['limit'] = moex_limit
-    n_concurrent_requests = moex_n_concurrent
-    params_list = []
-    for i in range(n_concurrent_requests):
-        query_params['start'] = start + moex_limit * i
-        params_list.append({'url': url, 'params': deepcopy(query_params)})
-    next_start = query_params['start'] + moex_limit
+    list_query_params: list = [],
+    next_start: int = None,
+    moex_root: str = None,
+    moex_n_concurrent: int = None,
+
+): 
+
     with Session() as s:
-        pool = ThreadPool(n_concurrent_requests)
+        pool = ThreadPool(moex_n_concurrent)
         results = pool.map(
-            lambda _params: __moex_parse_result(s, _params, moex_root), params_list
+            lambda _params: __moex_parse_result(s, _params, moex_root), list_query_params
         )
         pool.close()
         pool.join()
@@ -44,13 +37,20 @@ def moex_call(
     return final_result
 
 
-def __moex_parse_result(session, call_params: dict, moex_root):
+def __moex_parse_result(session, call_params: dict, moex_root:str):
     res = {'worker_params': call_params, 'success': True, 'end_flag': False}
+    if 'output_constant' in call_params:
+        output_constant=call_params.pop('output_constant')
+    else:
+        output_constant=None
     try:
         request_result = session.get(**call_params)
         res['data'] = request_result.json()[moex_root]['data']
-        if len(res['data']) == 0:
+        if len(res['data']) == 0 :
             res['end_flag'] = True
+        if output_constant is not None:
+            res['data']=[output_constant+_row for _row in res['data']]
+            
     except Exception as e:
         res['success'], res['error_message'] = False, repr(e)
     return res

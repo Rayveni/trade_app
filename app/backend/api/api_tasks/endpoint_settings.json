@@ -1,8 +1,11 @@
 {
-  "test_model1": {
-    "class": "UserRegistration"
-  },
   "upload_securities_dictionary": {
     "class": "UploadSecuritiesDictionary"
-  }
+  },
+  "task_retry": {
+    "class": "RetryTask"
+  },
+  "upload_moex_dictionaries": {
+    "class": "UploadMoexDictionaries"
+  }  
 }

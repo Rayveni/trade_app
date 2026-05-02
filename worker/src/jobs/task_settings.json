@@ -4,13 +4,13 @@
     "pipeline": [
       { "moex_method": "get_securities" },
       { "add_parameter": { "moex_root": "securities" } },
-      { "execute_moex_method": "1" },
+      { "execute_moex_method":  { "execute_type": "iteration" }},
       { "sql": { "query": "truncate", "table": "securities_dict" } },
       {
         "sql": {
           "query": "insert_many",
           "table": "securities_dict",
-          "pk_columns":["secid"],
+          "pk_columns": ["secid"],
           "columns": [
             "secid",
             "shortname",
@@ -26,6 +26,82 @@
             "\"group\"",
             "primary_boardid",
             "marketprice_boardid"
+          ]
+        }
+      }
+    ]
+  },
+  "RetryTask": {
+    "type": "tasks"
+  },
+  "UploadMoexDictionaries": {
+    "type": "moex",
+    "pipeline": [
+      { "moex_method": "get_securitytypes" },
+      { "add_parameter": { "moex_root": "securitytypes" } },
+      { "execute_moex_method": { "execute_type": "single" } },
+      { "sql": { "query": "truncate", "table": "securitytypes" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "securitytypes",
+          "pk_columns": ["id"],
+          "columns": ["id", "name", "title"]
+        }
+      },
+      { "moex_method": "get_securitygroups" },
+      { "add_parameter": { "moex_root": "securitygroups" } },
+      { "execute_moex_method": { "execute_type": "single" } },
+      { "sql": { "query": "truncate", "table": "securitygroups" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "securitygroups",
+          "pk_columns": ["id"],
+          "columns": ["id", "name", "title", "is_hidden"]
+        }
+      },
+      { "moex_method": "get_engines" },
+      { "add_parameter": { "moex_root": "engines" } },
+      { "execute_moex_method": { "execute_type": "single","save_data":1} },
+      { "sql": { "query": "truncate", "table": "engines" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "engines",
+          "pk_columns": ["id"],
+          "columns": ["id", "name", "title"]
+        }
+      },
+      { "moex_method": "get_markets" },
+      { "add_parameter": { "moex_root": "markets" } },
+      { "execute_moex_method": { "execute_type": "parallel_prev_step" ,"index_mapper":{"engine":1},"save_data":1} },
+      { "sql": { "query": "truncate", "table": "markets" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "markets",
+          "pk_columns": ["engine","id"],
+          "columns": ["engine", "id", "name", "title"]
+        }
+      },
+      { "moex_method": "get_boards" },
+      { "add_parameter": { "moex_root": "boards" } },
+      { "execute_moex_method":  { "execute_type": "parallel_prev_step" ,"index_mapper":{"engine":0,"markets":2}} },
+      { "sql": { "query": "truncate", "table": "boards" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "boards",
+          "pk_columns": ["engine","market","id"],
+          "columns": [
+            "engine",
+            "market",
+            "id",
+            "board_group_id",
+            "boardid",
+            "title",
+            "is_traded"
           ]
         }
       }

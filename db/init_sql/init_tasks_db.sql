@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS task_status (
   parent_task_id VARCHAR(36)  NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'NEW',
   error_message VARCHAR(56) NULL,
+  retry_count int NULL,
   sys_created TIMESTAMP DEFAULT now (),
   sys_updated TIMESTAMP NULL
 );

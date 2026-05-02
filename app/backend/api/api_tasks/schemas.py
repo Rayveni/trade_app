@@ -24,3 +24,9 @@ class UserRegistration(BaseModel):
 class UploadSecuritiesDictionary(BaseModel):
     start: int=0
     truncate: bool = True
+    
+class RetryTask(BaseModelConfig):
+    task_id: str 
+   
+class UploadMoexDictionaries(BaseModelConfig):
+    truncate: bool = False

@@ -1,5 +1,6 @@
 from pathlib import Path
 from sys import path
+from copy import deepcopy
 
 path.append('/worker/common_libs')
 from moex_api import moex_api
@@ -63,44 +64,78 @@ class Jobs:
         self.logger.info(
             f'~~~~~////////////////////////////////////////////~~~{res["next_start"]}~~~~~~~~~~~~'
         )
-        # сохранить данные если ок
-        # создать дочернюю задачу
-        # обновить статус
-        # commit
+
 
     def task_pipline(self, message: dict) -> dict:
         self.logger.info(message)
         settings = self.task_settings.get(message['header']['type'])
-        
-        if message['message'].get('truncate','false') =='true':
-            truncate_flg=True
-        else:
-            truncate_flg=False
-        
         if settings is None:
             step_output = {
                 'success': False,
                 'error_message': f"No task settings found for {message['header']['type']}",
             }
-        else:
+           
+        elif settings['type']=='moex':
+            if message['message'].get('truncate','false') =='true':
+                truncate_flg=True
+            
+            else:
+                truncate_flg=False
             step_output = {}
-            for step in settings['pipeline']:
+            saved_data=[]
+            for step in settings['pipeline']:              
                 ((key, value),) = step.items()
                 if key == 'moex_method':
                     step_output = getattr(self.moex_api, value)()
                 elif key == 'add_parameter':
                     step_output = {**step_output, **value}
                 elif key == 'execute_moex_method':
+                    execute_type=value['execute_type']
+                    url=step_output.get('url')
+                    query_params=step_output.get('query_params', {})
+                    moex_root=step_output.get('moex_root')
+                    params_list ,next_start = [] ,None                    
+                    start=int(message['message'].get('start',0))
+                    n_concurrent=deepcopy(self.moex_params['moex_n_concurrent'])
+
+                    if execute_type=='iteration':
+                        for i in range(n_concurrent):
+                            query_params['start'] = start + self.moex_params['moex_limit'] * i
+                            params_list.append({'url': url, 'params': deepcopy(query_params)})
+                        next_start = query_params['start'] + self.moex_params['moex_limit']
+
+                    elif execute_type=='single':
+                        n_concurrent=1
+                        params_list.append({'url': url, 'params': deepcopy(query_params)})
+                    
+                    elif execute_type=='parallel_prev_step':
+                        for _row in saved_data:
+                            url_params={k:_row[v] for k,v in value['index_mapper'].items()}
+                            params_list.append({'url': url.format(**url_params), 
+                                                'params': query_params,
+                                                'output_constant':list(url_params.values())})
+                        saved_data=[]
+                        
+                    else:
+                        step_output = {
+                            'success': False,
+                            'error_message': f"Unknown pipleline value {key, value}"}
+                
+ 
                     step_output = moex_call(
-                        url=step_output.get('url'),
-                        query_params=step_output.get('query_params', {}),
-                        moex_root=step_output.get('moex_root'),
-                        start=int(message['message']['start']),
-                        moex_limit=self.moex_params['moex_limit'],
-                        moex_n_concurrent=self.moex_params['moex_n_concurrent'],
+                        list_query_params=params_list,
+                        next_start=next_start,
+                        moex_root=moex_root,
+                        moex_n_concurrent=n_concurrent,
+
                     )
+                    
                     if step_output['success'] is False:
                         break
+                    if execute_type!='iteration':
+                        step_output['end_flag']=True
+                    if int(value.get('save_data',0))==1:
+                        saved_data=deepcopy(step_output['data'])
                 elif key == 'sql':
                     if value['query'] == 'truncate' and truncate_flg is True:
                         self.main_db_driver.truncate(value['table'])
@@ -119,4 +154,7 @@ class Jobs:
                 if truncate_flg:
                     message['message']['truncate']='false'
                 step_output['subtasks']=[message]
+        else:
+            pass
+        
         return step_output

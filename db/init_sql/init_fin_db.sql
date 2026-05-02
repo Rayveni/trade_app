@@ -20,25 +20,10 @@ CREATE TABLE IF NOT EXISTS securities_dict (
 create index idx_is_traded
 on securities_dict (is_traded);
 
-CREATE TABLE IF NOT EXISTS temp_securities_dict (LIKE securities_dict including all);
 
-CREATE TABLE IF NOT EXISTS etl_log (
-  table_name varchar(51)  not null,
-  status_flg bool not null default false,
-  start_param int not null default 0,
-  oper_date date not null default date '1900-01-01',
-  secid varchar(51) not null default  '',
-  query json null,
-  error_message text null,
-  sys_created timestamp  default now(),
-  sys_updated timestamp   null
-  
-);
-
-CREATE UNIQUE INDEX etl_log_mm_idx ON etl_log (table_name,start_param,oper_date,secid);
 
 CREATE TABLE IF NOT EXISTS securitytypes (
-  id int  not null,
+  id int  not null PRIMARY KEY,
   name varchar(100) not null ,
   title varchar(800)  null ,
   sys_created timestamp  default now(),
@@ -47,7 +32,7 @@ CREATE TABLE IF NOT EXISTS securitytypes (
 );
 
 CREATE TABLE IF NOT EXISTS securitygroups (
-  id int  not null,
+  id int  not null PRIMARY KEY,
   name varchar(100) not null ,
   title varchar(800)  null ,
   is_hidden smallint null,
@@ -57,7 +42,7 @@ CREATE TABLE IF NOT EXISTS securitygroups (
 );
 
 CREATE TABLE IF NOT EXISTS engines (
-  id int  not null,
+  id int  not null PRIMARY KEY,
   name varchar(100) not null ,
   title varchar(800)  null ,
   sys_created timestamp  default now(),
@@ -66,12 +51,12 @@ CREATE TABLE IF NOT EXISTS engines (
 );
 CREATE TABLE IF NOT EXISTS markets (
   engine varchar(100) not null,
-  id int  not null,
+  id int  not null ,
   name varchar(100) not null ,
   title varchar(800)  null ,
   sys_created timestamp  default now(),
-  sys_updated timestamp   null
-  
+  sys_updated timestamp   null,
+  PRIMARY KEY (engine, id)
 );
 
 CREATE TABLE IF NOT EXISTS securities_hist (
@@ -109,13 +94,14 @@ CREATE TABLE IF NOT EXISTS securities_hist (
 CREATE TABLE IF NOT EXISTS boards (
   engine varchar(100) not null,
   market varchar(100) not null ,
-  id int  not null,
+  id int  not null ,
   board_group_id int  not null,
   boardid varchar(20) null,
   title varchar(500)  null ,
   is_traded int  not null,  
   sys_created timestamp  default now(),
-  sys_updated timestamp   null 
+  sys_updated timestamp   null ,
+  PRIMARY KEY (engine,market, id)
 );
 
 create or replace view nonqual_shares as

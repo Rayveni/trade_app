@@ -49,9 +49,8 @@ class moex_api:
             'url': self.base_url.format('engines/{engine}/markets/{markets}/boards')
         }
 
-    def all_sec_history_per_day(
-        self, trade_date: date, engine: str = 'stock', market: str = 'shares'
-    ) -> dict:
+    def all_sec_history_per_day(self, trade_date: date, engine: str = 'stock', market: str = 'shares') -> dict:
+        """ trade_date: date, engine: str = 'stock', market: str = 'shares'"""
         url_ending = f'history/engines/{engine}/markets/{market}/securities'
         return {
             'url': self.base_url.format(url_ending),

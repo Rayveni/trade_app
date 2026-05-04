@@ -9,6 +9,7 @@ def moex_call(
     next_start: int = None,
     moex_root: str = None,
     moex_n_concurrent: int = None,
+    return_query_params: bool =False
 
 ): 
 
@@ -34,6 +35,8 @@ def moex_call(
         'data': data_list,
         'next_start': next_start,
     }
+    if return_query_params:
+        final_result['params_list']=list_query_params
     return final_result
 
 

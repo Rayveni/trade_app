@@ -141,8 +141,13 @@ class queue_listener:
         )
 
     def __update_task_status(
-        self, task_id: str, task_status: str, error_message: str = 'null',message_id:str =None
+        self, task_id: str, task_status: str, error_message: str = None,message_id:str =None
     ) -> None:
+        if error_message is None:
+            error_message='null'
+        else:
+            error_message=f"'{error_message}'"
+        
         self.task_db_driver.execute(
             self.sql_dict['update_task_status'].format(
                 task_status=task_status, error_message=error_message, task_id=task_id

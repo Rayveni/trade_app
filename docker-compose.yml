@@ -13,6 +13,7 @@ services:
       - log_level=${log_level}
       - msg_topic=${msg_topic}
       - db_host=${db_host}  
+      - start_trade_year=${start_trade_year} 
       #- app_name=${app_name}
     secrets:  
       - task_db_creds        
@@ -66,6 +67,8 @@ services:
       POSTGRES_USER: ${db_root_user}
       POSTGRES_PASSWORD_FILE: /run/secrets/db_root_password
       PGDATA: '/var/lib/postgresql/data/pgdata'
+      TZ: ${timezone}'
+      PGTZ: '${timezone}'
     secrets:
       - db_root_password     
       - task_db_creds 

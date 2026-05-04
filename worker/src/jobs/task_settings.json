@@ -2,9 +2,9 @@
   "UploadSecuritiesDictionary": {
     "type": "moex",
     "pipeline": [
-      { "moex_method": "get_securities" },
+      { "moex_method": { "method": "get_securities" } },
       { "add_parameter": { "moex_root": "securities" } },
-      { "execute_moex_method":  { "execute_type": "iteration" }},
+      { "execute_moex_method": { "execute_type": "iteration" } },
       { "sql": { "query": "truncate", "table": "securities_dict" } },
       {
         "sql": {
@@ -37,7 +37,7 @@
   "UploadMoexDictionaries": {
     "type": "moex",
     "pipeline": [
-      { "moex_method": "get_securitytypes" },
+      { "moex_method": { "method": "get_securitytypes" } },
       { "add_parameter": { "moex_root": "securitytypes" } },
       { "execute_moex_method": { "execute_type": "single" } },
       { "sql": { "query": "truncate", "table": "securitytypes" } },
@@ -49,7 +49,7 @@
           "columns": ["id", "name", "title"]
         }
       },
-      { "moex_method": "get_securitygroups" },
+      { "moex_method": { "method": "get_securitygroups" } },
       { "add_parameter": { "moex_root": "securitygroups" } },
       { "execute_moex_method": { "execute_type": "single" } },
       { "sql": { "query": "truncate", "table": "securitygroups" } },
@@ -61,9 +61,9 @@
           "columns": ["id", "name", "title", "is_hidden"]
         }
       },
-      { "moex_method": "get_engines" },
+      { "moex_method": { "method": "get_engines" } },
       { "add_parameter": { "moex_root": "engines" } },
-      { "execute_moex_method": { "execute_type": "single","save_data":1} },
+      { "execute_moex_method": { "execute_type": "single", "save_data": 1 } },
       { "sql": { "query": "truncate", "table": "engines" } },
       {
         "sql": {
@@ -73,27 +73,38 @@
           "columns": ["id", "name", "title"]
         }
       },
-      { "moex_method": "get_markets" },
+      { "moex_method": { "method": "get_markets" } },
       { "add_parameter": { "moex_root": "markets" } },
-      { "execute_moex_method": { "execute_type": "parallel_prev_step" ,"index_mapper":{"engine":1},"save_data":1} },
+      {
+        "execute_moex_method": {
+          "execute_type": "parallel_prev_step",
+          "index_mapper": { "engine": 1 },
+          "save_data": 1
+        }
+      },
       { "sql": { "query": "truncate", "table": "markets" } },
       {
         "sql": {
           "query": "insert_many",
           "table": "markets",
-          "pk_columns": ["engine","id"],
+          "pk_columns": ["engine", "id"],
           "columns": ["engine", "id", "name", "title"]
         }
       },
-      { "moex_method": "get_boards" },
+      { "moex_method": { "method": "get_boards" } },
       { "add_parameter": { "moex_root": "boards" } },
-      { "execute_moex_method":  { "execute_type": "parallel_prev_step" ,"index_mapper":{"engine":0,"markets":2}} },
+      {
+        "execute_moex_method": {
+          "execute_type": "parallel_prev_step",
+          "index_mapper": { "engine": 0, "markets": 2 }
+        }
+      },
       { "sql": { "query": "truncate", "table": "boards" } },
       {
         "sql": {
           "query": "insert_many",
           "table": "boards",
-          "pk_columns": ["engine","market","id"],
+          "pk_columns": ["engine", "market", "id"],
           "columns": [
             "engine",
             "market",
@@ -102,6 +113,69 @@
             "boardid",
             "title",
             "is_traded"
+          ]
+        }
+      }
+    ]
+  },
+  "SecuritiesHistory": {
+    "type": "moex_hist",
+    "subtype": "create_intervals",
+    "dates": {
+      "interval": ["start_date", "end_date"],
+      "date_format": "%Y-%m-%d",
+      "attr_name": "trade_date"
+    },
+    "moex_method": {
+      "method": "all_sec_history_per_day",
+      "params": ["engine", "market"]
+    },
+    "create_sublass": "SecuritiesHistorySub"
+  },
+  "SecuritiesHistorySub": {
+    "type": "moex",
+    "pipeline": [
+      { "moex_method": { "attr": "moex_call" } },
+      {
+        "add_parameter": {
+          "moex_root": "history.cursor",
+          "return_query_params": true
+        }
+      },
+      { "change_query_param": { "limit": 1 } },
+      { "execute_moex_method": { "execute_type": "single" } },
+      { "add_parameter": { "moex_root": "history" } },
+      { "execute_moex_method": { "execute_type": "from_cursor" } },
+      {
+        "sql": {
+          "query": "insert_many",
+          "table": "securities_hist",
+          "pk_columns": ["tradedate", "secid", "boardid"],
+          "columns": [
+            "boardid",
+            "tradedate",
+            "shortname",
+            "secid",
+            "numtrades",
+            "value",
+            "open",
+            "low",
+            "high",
+            "legalcloseprice",
+            "waprice",
+            "close",
+            "volume",
+            "marketprice2",
+            "marketprice3",
+            "admittedquote",
+            "mp2valtrd",
+            "marketprice3tradesvalue",
+            "admittedvalue",
+            "waval",
+            "tradingsession",
+            "currencyid",
+            "trendclspr",
+            "trade_session_date"
           ]
         }
       }

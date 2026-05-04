@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from uuid import uuid4
 
+from datetime import date,datetime
+from os import getenv
 
 class BaseModelConfig(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -30,3 +32,9 @@ class RetryTask(BaseModelConfig):
    
 class UploadMoexDictionaries(BaseModelConfig):
     truncate: bool = False
+    
+class SecuritiesHistory(BaseModelConfig):
+    engine:str ='stock'
+    market:str ='shares'
+    start_date:date=date(int(getenv('start_trade_year')),1,1)
+    end_date:date=datetime.now().date()

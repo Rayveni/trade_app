@@ -22,14 +22,14 @@ class selenium_wrapper:
         for _param in service_params:
             self.options.add_argument(_param)
 
-    def get_page_source(self, url: str) -> str:
+    def get_page_source(self, url: str) -> dict:
         driver = webdriver.Chrome(service=self.service, options=self.options)
         try:
             driver.get(url)
             self.__wait_for_page_load(driver)
-            res = (True, driver.page_source)
+            res =  {'success':True,'page_source':driver.page_source}  
         except Exception as e:
-            res = (False, traceback.format_exc())
+            res = {'success':False,'error_message':traceback.format_exc()}  
         finally:
             driver.close()
         return res

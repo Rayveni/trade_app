@@ -38,3 +38,10 @@ class SecuritiesHistory(BaseModelConfig):
     market:str ='shares'
     start_date:date=date(int(getenv('start_trade_year')),1,1)
     end_date:date=datetime.now().date()
+    
+class FinamSecPrepare(BaseModelConfig):    
+    truncate: bool = False
+    is_traded: int = 1
+    group: str = 'stock_shares'
+    primary_boardid: str = 'TQBR'
+

@@ -40,8 +40,6 @@ with open('/worker/topics_config.json', 'r') as file:
 
 apscheduler_logger = get_logger('apscheduler', 'ERROR')
 logger = get_logger(__name__)
-logger.info('start')
-
 queue_listener_inst = queue_listener(
     msg_broker=msg_broker,
     task_db_driver=task_db_driver,

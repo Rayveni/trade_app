@@ -180,5 +180,11 @@
         }
       }
     ]
+  },
+  "FinamSecPrepare": {
+    "type": "finam_prepare"
+  },
+    "FinamSecDiv": {
+    "type": "finam_div"
   }
 }

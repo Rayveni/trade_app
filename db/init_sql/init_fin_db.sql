@@ -115,12 +115,12 @@ CREATE TABLE IF NOT EXISTS finam_data  (
   secid varchar(51) PRIMARY KEY,
   dividends_html bytea null,
   news_html bytea null,
-  status int not null default 0,
-  final_flg bool not null default false,
   error_message text null,
+  dividends_flag bool not null default false,
   sys_created timestamp not null default now(),
   sys_updated timestamp null 
 ) ;
+
 
 
 CREATE TABLE IF NOT EXISTS finam_divs  (
@@ -131,7 +131,5 @@ CREATE TABLE IF NOT EXISTS finam_divs  (
   sys_created timestamp not null default now(),
   sys_updated timestamp null 
 ) ;
- CREATE UNIQUE INDEX finam_dives_mm_idx ON finam_divs (secid desc,dividend_record_date);
- 
-
+ CREATE UNIQUE INDEX finam_dives_mm_idx ON finam_divs (secid desc,dividend_record_date,dividend_value);
  

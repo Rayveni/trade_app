@@ -1,6 +1,8 @@
-apscheduler
-redis
-psycopg2
-requests
+apscheduler==3.11.0
+redis==6.2.0
+psycopg2==2.9.10
+requests==2.32.5
+selenium==4.33.0
+lxml==6.1.0
 
 pip-tools

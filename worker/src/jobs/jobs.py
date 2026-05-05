@@ -6,8 +6,10 @@ path.append('/worker/common_libs')
 from moex_api import moex_api
 from os import getenv
 from ._moex_call import moex_call
+from .finam_call import finam_divs
 from json import load
 from datetime import date, timedelta,datetime
+
 
 class Jobs:
     __slots__ = (
@@ -19,6 +21,7 @@ class Jobs:
         'moex_api',
         'moex_params',
         'task_settings',
+        'finam_call'
     )
 
     def __init__(self, msg_broker, task_db_driver, main_db_driver, logger):
@@ -31,6 +34,7 @@ class Jobs:
         for file_path in Path('/worker/worker/src/jobs/sql/fin_db').rglob('*.sql'):
             with open(file_path, 'r') as f:
                 self.sql_dict[str(file_path.stem)] = f.read()
+      
         self.moex_api = moex_api()
         self.moex_params = {
             'moex_limit': int(getenv('moex_limit')),
@@ -38,32 +42,6 @@ class Jobs:
         }
         with open('/worker/worker/src/jobs/task_settings.json', 'r') as file:
             self.task_settings = load(file)
-
-    def __delete_table(self, table_name: str, conditions: str = 'true') -> None:
-        sql = self.sql_dict['common_delete'].format(
-            table=table_name, condition=conditions
-        )
-        self.main_db_driver.execute(sql)
-
-    def first_task(self, msg_id):
-        self.logger.info(
-            f'~~~~~////////////////////////////////////////////~~~{msg_id}~~~~~~~~~~~~'
-        )
-        # получить ссылку
-        request_info = self.moex_api.get_securities()
-        moex_root = 'securities'
-        # получить данные
-        res = moex_call(
-            url=request_info.get('url'),
-            query_params=request_info.get('query_params', {}),
-            moex_root=moex_root,
-            moex_limit=self.moex_params['moex_limit'],
-            moex_n_concurrent=self.moex_params['moex_n_concurrent'],
-        )
-
-        self.logger.info(
-            f'~~~~~////////////////////////////////////////////~~~{res["next_start"]}~~~~~~~~~~~~'
-        )
 
     def __task_pipline_result(
         self,
@@ -86,6 +64,7 @@ class Jobs:
     def task_pipline(self, message: dict) -> dict:
         self.logger.info(message)
         settings = self.task_settings.get(message['header']['type'])
+        __message,__header=message['message'],message['header']
         if settings is None:
             task_pipline_result = self.__task_pipline_result(
                 success_flg=False,
@@ -242,7 +221,53 @@ class Jobs:
                 task_pipline_result = self.__task_pipline_result(success_flg=True,
                                                              end_flg = False,
                                                              subtasks=subtasks)
+        elif settings['type'] == 'finam_prepare':
+         
+            if message['message'].get('truncate', 'false') == 'true':
+                self.main_db_driver.truncate('finam_data')
+                      
+            sql=self.sql_dict['finam_sec_list'].format(is_traded=message['message']['is_traded'],
+                                                       group=message['message']['group']
+                                                       ,primary_boardid=message['message']['primary_boardid'])
+            
+            sql_res=self.main_db_driver.fetch_all(sql,return_type='list')[1:]
+            self.logger.info([_row[0] for _row in sql_res])
+            subtasks=[]
+            for _row in sql_res:
+                message['message']={}
+                message['message']['secid'] =_row[0] 
+                message['header']['type']='FinamSecDiv'
+                subtasks.append(deepcopy(message))
+                
+            task_pipline_result = self.__task_pipline_result(success_flg=True,
+                                                             end_flg = False,
+                                                             subtasks=subtasks)            
+        elif settings['type'] == 'finam_div': 
+            secid=__message['secid']
+            scrap_result=finam_divs(secid)             
+            success_flg,divs,html,error_message=scrap_result['success'],scrap_result.get('divs',()),scrap_result.get('html','null'),scrap_result.get('error_message',None)
+            self.logger.info(f'process {secid}')
+            if error_message is not None:
+                sql_error_message=f"'{error_message}'"  
+            else:
+                sql_error_message='null'  
+                      
+            
+            
+            sql=self.sql_dict['update_finam_divs']
+          
+            self.main_db_driver.execute_many(sql,divs)
+            sql=self.sql_dict['update_finam_data'].format(secid=secid,error_message=sql_error_message,dividends_flag=success_flg)
+           
+            self.main_db_driver.execute(sql,(html,))
+            task_pipline_result = self.__task_pipline_result(success_flg=success_flg,
+                                                             end_flg = True,
+                                                             error_message=error_message
+                                                             ) 
         else:
-            pass
+            task_pipline_result = self.__task_pipline_result(
+                success_flg=False,
+                error_message=f'No task settings["type"] found for {message["header"]["type"]}',
+            )
 
         return task_pipline_result

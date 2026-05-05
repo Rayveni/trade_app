@@ -5,12 +5,20 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update \
-    && apt-get -y install libpq-dev gcc 
+    && apt-get -y install libpq-dev gcc wget gpg unzip
 #RUN apk add build-base libpq libpq-dev   
 COPY requirements.txt /
 RUN pip3 install --no-cache-dir -r /requirements.txt
 
 RUN rm requirements.txt
+
+
+COPY install-chromedriver.sh /install-chromedriver.sh
+COPY install-chrome.sh /install-chrome.sh
+
+RUN /install-chrome.sh  
+RUN /install-chromedriver.sh 
+
 
 COPY start.sh /worker/
 WORKDIR /worker/worker

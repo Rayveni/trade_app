@@ -10,5 +10,8 @@
   }  ,
     "securities_history": {
     "class": "SecuritiesHistory"
-  }  
+  }  ,
+    "finam_sec_prepare": {
+    "class": "FinamSecPrepare"
+  } 
 }
